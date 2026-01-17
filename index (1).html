@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microsoft Licensing Tracker - Oetker Collection</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: linear-gradient(160deg, #1a1a2e 0%, #1a2744 40%, #16213e 70%, #1a1a2e 100%);
+      --text-primary: #1a1a2e;
+      --text-secondary: #5a5a6e;
+      --text-muted: #8a8a9a;
+      --text-light: #ffffff;
+      --accent-orange: #E87A2A;
+      --accent-orange-light: #F5923D;
+      --accent-orange-bg: rgba(232, 122, 42, 0.1);
+      --accent-green: #10b981;
+      --accent-green-bg: rgba(16, 185, 129, 0.1);
+      --accent-yellow: #f59e0b;
+      --accent-yellow-bg: rgba(245, 158, 11, 0.1);
+      --accent-red: #ef4444;
+      --accent-red-bg: rgba(239, 68, 68, 0.1);
+      --accent-blue: #3b82f6;
+      --accent-blue-bg: rgba(59, 130, 246, 0.1);
+      --accent-purple: #8b5cf6;
+      --accent-purple-bg: rgba(139, 92, 246, 0.1);
+      --accent-cyan: #06b6d4;
+      --accent-cyan-bg: rgba(6, 182, 212, 0.1);
+      --accent-rose: #f43f5e;
+      --accent-rose-bg: rgba(244, 63, 94, 0.1);
+      --border-color: #c8c8d0;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.15);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.25);
+      --gradient-header: linear-gradient(135deg, #1a1a2e 0%, #1e3a5f 40%, #3b82f6 100%);
+      --gradient-card: linear-gradient(180deg, #e5e5eb 0%, #c8c8d0 100%);
+      --gradient-orange: linear-gradient(135deg, #E87A2A 0%, #F5923D 100%);
+      --card-dark: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg-page); color: var(--text-light); min-height: 100vh; }
+    .app-container { max-width: 1600px; margin: 0 auto; padding: 2rem; }
+    
+    /* Header */
+    .header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 2rem; 
+      padding: 1.5rem 2rem; 
+      background: var(--gradient-header); 
+      border-radius: 16px; 
+      box-shadow: var(--shadow-md); 
+    }
+    .logo-section { display: flex; align-items: center; gap: 1.5rem; }
+    .logo-img { height: 40px; width: auto; }
+    .logo-text h1 { font-size: 1.4rem; font-weight: 700; color: var(--text-light); }
+    .logo-text span { font-size: 0.85rem; color: rgba(255,255,255,0.7); }
+    .header-right { display: flex; align-items: center; gap: 1.5rem; }
+    .last-update { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: rgba(255,255,255,0.6); }
+    .loading-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--accent-orange); margin-top: 0.25rem; }
+    .loading-dot { width: 8px; height: 8px; background: var(--accent-orange); border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    
+    /* Subsidiary Filter */
+    .subsidiary-filter {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(255,255,255,0.1);
+      padding: 0.5rem 1rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .subsidiary-filter label {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .subsidiary-filter select {
+      background: transparent;
+      border: none;
+      color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding-right: 1rem;
+    }
+    .subsidiary-filter select option { background: #1a1a2e; color: white; }
+    .subsidiary-filter select:focus { outline: none; }
+    
+    /* KPI Grid - 5 cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 768px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    .kpi-card { 
+      background: var(--gradient-card); 
+      border-radius: 12px; 
+      padding: 1.25rem; 
+      position: relative; 
+      box-shadow: var(--shadow-sm); 
+      overflow: hidden; 
+    }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--gradient-orange); }
+    .kpi-card.green::before { background: var(--accent-green); }
+    .kpi-card.yellow::before { background: var(--accent-yellow); }
+    .kpi-card.red::before { background: var(--accent-red); }
+    .kpi-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .kpi-value { font-size: 2rem; font-weight: 700; font-family: 'Space Mono', monospace; color: var(--text-primary); }
+    .kpi-subtitle { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem; }
+    
+    /* Main License Section - Full Width */
+    .license-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      align-items: stretch;
+    }
+    @media (max-width: 1100px) { 
+      .license-section { 
+        grid-template-columns: 1fr; 
+        min-height: auto;
+      } 
+    }
+    
+    /* Left: Doughnut with Legend */
+    .doughnut-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 0;
+      background: transparent;
+      border-radius: 0;
+      border: none;
+    }
+    .doughnut-panel-content {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .doughnut-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+    }
+    .doughnut-panel-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.7);
+    }
+    .doughnut-wrapper-large {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 280px;
+    }
+    .doughnut-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .doughnut-center-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+      color: white;
+      letter-spacing: 2px;
+    }
+    .doughnut-center-label {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .doughnut-legend-side {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.75rem;
+      padding-left: 2rem;
+      border-left: 1px solid rgba(255,255,255,0.1);
+      min-width: 200px;
+    }
+    .legend-item-side {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.5rem 0;
+    }
+    .legend-left-side {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .legend-color-side {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .legend-label-side {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.85);
+    }
+    .legend-value-side {
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+      color: white;
+    }
+    
+    /* End of Support Card */
+    .eos-card {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.08) 100%);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-top: auto;
+    }
+    .eos-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .eos-icon {
+      font-size: 1rem;
+    }
+    .eos-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #fbbf24;
+    }
+    .eos-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+      color: #fcd34d;
+      margin-bottom: 0.5rem;
+    }
+    .eos-value-label {
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: rgba(255,255,255,0.6);
+    }
+    .eos-breakdown {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+    .eos-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.7);
+    }
+    .eos-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+    .eos-dot.critical { background: #ef4444; }
+    .eos-dot.high { background: #f97316; }
+    .eos-dot.medium { background: #eab308; }
+    .eos-count {
+      font-family: 'Space Mono', monospace;
+      font-weight: 600;
+      color: rgba(255,255,255,0.9);
+    }
+    .eos-affected {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.5);
+      font-style: italic;
+    }
+    
+    /* Right: License Cards Stack */
+    .license-cards-wrapper {
+      display: flex;
+      flex-direction: column;
+    }
+    .license-cards-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex: 1;
+      justify-content: space-between;
+    }
+    .license-cards-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+    }
+    .license-cards-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.7);
+    }
+    .estimated-badge {
+      background: var(--accent-orange);
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: white;
+    }
+    .license-card {
+      background: var(--card-dark);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      border: 1px solid rgba(255,255,255,0.08);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .license-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .license-card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .license-card-icon.ws { background: linear-gradient(135deg, rgba(59,130,246,0.3), rgba(59,130,246,0.1)); color: #60a5fa; }
+    .license-card-icon.sql { background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(139,92,246,0.1)); color: #a78bfa; }
+    .license-card-icon.rds { background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(16,185,129,0.1)); color: #34d399; }
+    .license-card-icon.alert { background: linear-gradient(135deg, rgba(244,63,94,0.3), rgba(244,63,94,0.1)); color: #fb7185; }
+    .license-card-title {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .license-card-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+      color: white;
+      margin-bottom: 0.25rem;
+    }
+    .license-card-detail {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+    }
+    .license-card-editions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .edition-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .edition-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+    .edition-dot.dc { background: #3b82f6; }
+    .edition-dot.std { background: #8b5cf6; }
+    .edition-dot.ent { background: #f43f5e; }
+    .edition-dot.std-sql { background: #f59e0b; }
+    .edition-label {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.6);
+    }
+    .edition-value {
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: 'Space Mono', monospace;
+      color: rgba(255,255,255,0.9);
+    }
+    
+    /* Tabs & Search */
+    .tabs-container { 
+      background: var(--gradient-card); 
+      border-radius: 12px; 
+      padding: 0.5rem; 
+      margin-bottom: 1.5rem; 
+      box-shadow: var(--shadow-sm); 
+      display: inline-flex; 
+      gap: 0.25rem; 
+    }
+    .tab { background: transparent; border: none; color: var(--text-secondary); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; transition: all 0.2s ease; }
+    .tab:hover { color: var(--text-primary); background: rgba(255,255,255,0.5); }
+    .tab.active { color: white; background: var(--accent-orange); }
+    .filter-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .search-input { 
+      background: var(--gradient-card); 
+      border: none; 
+      color: var(--text-primary); 
+      padding: 0.75rem 1rem; 
+      border-radius: 10px; 
+      font-family: 'DM Sans', sans-serif; 
+      font-size: 0.9rem; 
+      flex: 1; 
+      min-width: 250px; 
+      box-shadow: var(--shadow-sm); 
+    }
+    .search-input::placeholder { color: var(--text-muted); }
+    .search-input:focus { outline: none; box-shadow: 0 0 0 3px var(--accent-orange-bg), var(--shadow-sm); }
+    
+    /* BU Cards */
+    .bu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 1.25rem; }
+    .bu-card { 
+      background: var(--gradient-card); 
+      border-radius: 14px; 
+      padding: 1.5rem; 
+      cursor: pointer; 
+      transition: all 0.2s ease; 
+      position: relative; 
+      box-shadow: var(--shadow-sm); 
+    }
+    .bu-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .bu-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+    .bu-unit-badge { font-family: 'Space Mono', monospace; font-size: 0.7rem; background: var(--accent-orange-bg); color: var(--accent-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-weight: 600; }
+    .bu-name { font-size: 1.15rem; font-weight: 600; margin: 0.5rem 0 0.25rem 0; color: var(--text-primary); }
+    .bu-country { font-size: 0.85rem; color: var(--text-secondary); }
+    .bu-subsidiary { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .subsidiary-tag { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; }
+    .subsidiary-tag.martin-braun { background: var(--accent-blue-bg); color: var(--accent-blue); }
+    .subsidiary-tag.budenheim { background: var(--accent-cyan-bg); color: var(--accent-cyan); }
+    .bu-infra-summary { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; font-style: italic; background: rgba(255,255,255,0.4); padding: 0.5rem 0.75rem; border-radius: 6px; }
+    .status-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+    .status-badge.complete { background: var(--accent-green-bg); color: var(--accent-green); }
+    .status-badge.received { background: var(--accent-orange-bg); color: var(--accent-orange); }
+    .status-badge.incomplete { background: var(--accent-yellow-bg); color: var(--accent-yellow); }
+    .status-badge.pending { background: var(--accent-yellow-bg); color: var(--accent-yellow); }
+    .status-badge.not-sent { background: var(--accent-red-bg); color: var(--accent-red); }
+    .status-badge.out-of-scope { background: rgba(0,0,0,0.1); color: var(--text-muted); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .progress-section { margin: 1rem 0; }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .progress-label { font-size: 0.8rem; color: var(--text-secondary); }
+    .progress-value { font-family: 'Space Mono', monospace; font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
+    .progress-bar { height: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--gradient-orange); border-radius: 4px; }
+    .license-summary { display: flex; gap: 0.5rem; margin: 1rem 0; flex-wrap: wrap; }
+    .license-tag { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; font-family: 'Space Mono', monospace; }
+    .license-tag.ws { background: var(--accent-blue-bg); color: var(--accent-blue); }
+    .license-tag.sql { background: var(--accent-purple-bg); color: var(--accent-purple); }
+    .license-tag.rds { background: var(--accent-green-bg); color: var(--accent-green); }
+    .checklist-mini { display: flex; gap: 0.4rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+    .check-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(0,0,0,0.15); }
+    .check-dot.done { background: var(--accent-green); }
+    .priority-badge { position: absolute; top: 1rem; right: 1rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; padding: 0.3rem 0.6rem; border-radius: 6px; }
+    .priority-badge.critical { background: var(--accent-rose-bg); color: var(--accent-rose); }
+    .priority-badge.high { background: var(--accent-red-bg); color: var(--accent-red); }
+    .priority-badge.medium { background: var(--accent-yellow-bg); color: var(--accent-yellow); }
+    .priority-badge.low { background: var(--accent-green-bg); color: var(--accent-green); }
+    
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+    .modal-content { background: linear-gradient(180deg, #e5e5eb 0%, #d0d0d8 100%); border-radius: 20px; width: 100%; max-width: 750px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .modal-header { padding: 1.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(180deg, #d8d8e0 0%, #c8c8d0 100%); border-radius: 20px 20px 0 0; }
+    .modal-close { background: rgba(255,255,255,0.8); border: 1px solid var(--border-color); color: var(--text-primary); width: 40px; height: 40px; border-radius: 10px; cursor: pointer; font-size: 1.25rem; display: flex; align-items: center; justify-content: center; }
+    .modal-close:hover { background: var(--accent-red); border-color: var(--accent-red); color: white; }
+    .modal-body { padding: 1.75rem; }
+    .detail-section { margin-bottom: 1.75rem; }
+    .detail-section h3 { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-color); }
+    .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .info-item { background: rgba(255,255,255,0.5); padding: 1rem; border-radius: 10px; }
+    .info-item.full-width { grid-column: span 2; }
+    .info-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.3rem; }
+    .info-value { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); }
+    .info-value.infra { font-weight: 400; font-style: italic; color: var(--text-secondary); }
+    .license-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; background: rgba(255,255,255,0.4); border-radius: 10px; overflow: hidden; }
+    .license-table th, .license-table td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+    .license-table th { background: rgba(255,255,255,0.5); font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+    .license-table td { font-size: 0.9rem; color: var(--text-primary); }
+    .license-table tr:last-child td { border-bottom: none; }
+    .license-table .product-cell { display: flex; align-items: center; gap: 0.5rem; }
+    .license-table .product-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; }
+    .license-table .product-icon.ws { background: var(--accent-blue-bg); color: var(--accent-blue); }
+    .license-table .product-icon.sql { background: var(--accent-purple-bg); color: var(--accent-purple); }
+    .license-table .product-icon.rds { background: var(--accent-green-bg); color: var(--accent-green); }
+    .license-table .value-cell { font-family: 'Space Mono', monospace; font-weight: 600; }
+    .license-table .required-cell { font-family: 'Space Mono', monospace; color: var(--accent-orange); font-weight: 600; }
+    .alert-box { background: var(--accent-red-bg); border-left: 4px solid var(--accent-red); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    .alert-box.warning { background: var(--accent-yellow-bg); border-left-color: var(--accent-yellow); }
+    .alert-title { font-size: 0.85rem; font-weight: 700; color: var(--accent-red); margin-bottom: 0.4rem; }
+    .alert-box.warning .alert-title { color: var(--accent-yellow); }
+    .alert-content { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+    .checklist-full { display: grid; gap: 0.6rem; }
+    .checklist-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; }
+    .checklist-checkbox { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .checklist-checkbox.checked { background: var(--accent-green); border-color: var(--accent-green); }
+    .checklist-checkbox.checked::after { content: '✓'; color: white; font-size: 0.75rem; font-weight: bold; }
+    .checklist-text { font-size: 0.9rem; color: var(--text-primary); }
+    .checklist-text.done { color: var(--text-muted); text-decoration: line-through; }
+    .no-data { color: var(--text-muted); font-style: italic; font-size: 0.8rem; }
+    
+    @media (max-width: 768px) { 
+      .app-container { padding: 1rem; } 
+      .header { flex-direction: column; gap: 1rem; padding: 1.25rem; } 
+      .header-right { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); } 
+      .bu-grid { grid-template-columns: 1fr; } 
+      .info-grid { grid-template-columns: 1fr; } 
+      .info-item.full-width { grid-column: span 1; } 
+      .doughnut-panel { flex-direction: column; }
+      .doughnut-legend-side { border-left: none; border-top: 1px solid rgba(255,255,255,0.1); padding-left: 0; padding-top: 1.5rem; margin-top: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const CONFIG = { GOOGLE_SHEETS: { ENABLED: true, API_KEY: 'AIzaSyD7F4sjl8DUYvfLBOq5N5cXm-AThaDnGdY', SPREADSHEET_ID: '1RldtkHxCkFH9iDVNxEuAW_C1bWSzOlNOv_e5aPjvBFc', SHEET_NAME: 'Data' }, AUTO_REFRESH_MINUTES: 5 };
+    const WORKFLOW_STEPS = ["Questionnaire sent", "Questionnaire received", "Initial analysis", "Follow-up sent", "Additional data received", "RVTools received", "SQL scripts received", "Final analysis", "Report delivered"];
+    
+    const DEFAULT_DATA = [
+      { unit_id: "1", unit_name: "Agrano KG", subsidiary: "Martin Braun", country: "Germany", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "4 ESXi hosts, 8 VMs, vMotion enabled", ws_deployed: 8, ws_licenses_required: "72 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,false,true,false] },
+      { unit_id: "2", unit_name: "Diversi Foods", subsidiary: "Martin Braun", country: "Belgium", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "2 ESXi, vMotion enabled", ws_deployed: 6, ws_licenses_required: "32 cores DC", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,false,true,false] },
+      { unit_id: "3", unit_name: "MBI-Zerouno", subsidiary: "Martin Braun", country: "Italy", questionnaire_status: "Complete", response_rate: 95, priority: "Medium", critical_points: "1x WS 2012 R2 EOS", missing_data: "", infrastructure_summary: "2 ESXi hosts, 10 VMs", ws_deployed: 10, ws_licenses_required: "32 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,true,true,false] },
+      { unit_id: "4", unit_name: "MBES", subsidiary: "Martin Braun", country: "Spain", questionnaire_status: "Pending", response_rate: 85, priority: "High", critical_points: "OEM + vMotion conflict", missing_data: "License type clarification", infrastructure_summary: "2 Hyper-V hosts, vMotion", ws_deployed: 5, ws_licenses_required: "24 cores Std", sql_deployed: "4x Express", sql_licenses_required: "Free", rds_deployed: 1, rds_licenses_required: "15 CALs", steps: [true,true,true,true,true,false,false,false,false] },
+      { unit_id: "5", unit_name: "WBB", subsidiary: "Martin Braun", country: "Germany", questionnaire_status: "Pending", response_rate: 75, priority: "Critical", critical_points: "SQL Enterprise + vMotion/DRS = Datacenter required", missing_data: "RVTools; Host cores; SQL details", infrastructure_summary: "3 ESXi + Proxmox, 88 VMs, DRS enabled", ws_deployed: 61, ws_licenses_required: "TBD (Datacenter)", sql_deployed: "2 Ent + 3 VMs", sql_licenses_required: "Enterprise TBD", rds_deployed: 1, rds_licenses_required: "195 CALs", steps: [true,true,true,true,false,false,false,false,false] },
+      { unit_id: "6", unit_name: "Budenheim", subsidiary: "Budenheim", country: "Germany", questionnaire_status: "Complete", response_rate: 95, priority: "High", critical_points: "SQL Enterprise Always On; DRS on Germany cluster", missing_data: "License proofs", infrastructure_summary: "17 ESXi (376 cores), 138 VMs, 7 countries, DRS on DEBUDVMCL1", ws_deployed: 138, ws_licenses_required: "128c DC + 248c Std", sql_deployed: "2 Ent + 2 Std", sql_licenses_required: "16c Ent + 16c Std", rds_deployed: 4, rds_licenses_required: "70 CALs", steps: [true,true,true,true,true,true,true,true,false] },
+      { unit_id: "7", unit_name: "Agrano AG", subsidiary: "Martin Braun", country: "Switzerland", questionnaire_status: "Complete", response_rate: 85, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "2 ESXi hosts", ws_deployed: 6, ws_licenses_required: "32 cores Std", sql_deployed: 1, sql_licenses_required: "8 cores Std", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,false,true,false] },
+      { unit_id: "8", unit_name: "Polen Food", subsidiary: "Martin Braun", country: "Turkey", questionnaire_status: "Complete", response_rate: 90, priority: "High", critical_points: "4x EOS VMs (WS2008R2, WS2012); SQL CALs gap", missing_data: "SQL CAL count", infrastructure_summary: "4 ESXi (68 cores), 18 VMs, 3 sites, HA enabled", ws_deployed: 17, ws_licenses_required: "64 cores Std", sql_deployed: "1 Std + 2 Exp", sql_licenses_required: "4c Std + 60-70 CALs", rds_deployed: 2, rds_licenses_required: "54 CALs", steps: [true,true,true,true,true,true,true,true,false] },
+      { unit_id: "9", unit_name: "Montana GB", subsidiary: "Martin Braun", country: "United Kingdom", questionnaire_status: "Complete", response_rate: 95, priority: "Critical", critical_points: "⚠️ SQL 2019 ENTERPRISE undeclared (10 cores)", missing_data: "SQL Enterprise license verification", infrastructure_summary: "4 ESXi hosts, 13 VMs, 2 sites", ws_deployed: 11, ws_licenses_required: "64 cores Std", sql_deployed: "1 Std + 1 Ent", sql_licenses_required: "8c Std + 10c Ent ⚠️", rds_deployed: 1, rds_licenses_required: "500 CALs", steps: [true,true,true,true,true,true,true,true,false] },
+      { unit_id: "10", unit_name: "MBPL", subsidiary: "Martin Braun", country: "Poland", questionnaire_status: "Complete", response_rate: 95, priority: "Low", critical_points: "", missing_data: "SQL license proof", infrastructure_summary: "2 Hyper-V hosts (20 cores), 6 VMs, no HA", ws_deployed: 5, ws_licenses_required: "32 cores Std", sql_deployed: "1 Std", sql_licenses_required: "4 cores Std", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,true,true,false] },
+      { unit_id: "11", unit_name: "MBN", subsidiary: "Martin Braun", country: "Netherlands", questionnaire_status: "Pending", response_rate: 70, priority: "Medium", critical_points: "", missing_data: "Windows/SQL editions", infrastructure_summary: "1 physical + VMs", ws_deployed: 4, ws_licenses_required: "8 cores Std", sql_deployed: "TBD", sql_licenses_required: "TBD", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,false,false,false,false,false] },
+      { unit_id: "12", unit_name: "MBR", subsidiary: "Martin Braun", country: "-", questionnaire_status: "Out of Scope", response_rate: 0, priority: "", critical_points: "", missing_data: "", infrastructure_summary: "", ws_deployed: "", ws_licenses_required: "", sql_deployed: "", sql_licenses_required: "", rds_deployed: "", rds_licenses_required: "", steps: [false,false,false,false,false,false,false,false,false] },
+      { unit_id: "13", unit_name: "MBHU", subsidiary: "Martin Braun", country: "Hungary", questionnaire_status: "Pending", response_rate: 40, priority: "High", critical_points: "", missing_data: "Infrastructure details needed", infrastructure_summary: "TBD", ws_deployed: "", ws_licenses_required: "TBD", sql_deployed: "", sql_licenses_required: "TBD", rds_deployed: "", rds_licenses_required: "", steps: [true,true,false,true,false,false,false,false,false] },
+      { unit_id: "14", unit_name: "BE (Dakri)", subsidiary: "Martin Braun", country: "Poland", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "4 ESXi hosts, DRS enabled", ws_deployed: 12, ws_licenses_required: "64 cores DC", sql_deployed: 1, sql_licenses_required: "8 cores Std", rds_deployed: 1, rds_licenses_required: "10 CALs", steps: [true,true,true,true,true,true,true,true,false] },
+      { unit_id: "15", unit_name: "Hoffs America", subsidiary: "Martin Braun", country: "USA", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "1 physical server", ws_deployed: 3, ws_licenses_required: "16 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: 1, rds_licenses_required: "25 CALs", steps: [true,true,true,true,true,true,false,true,false] },
+      { unit_id: "16", unit_name: "CAP Fruit", subsidiary: "Martin Braun", country: "France", questionnaire_status: "Complete", response_rate: 85, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "2 ESXi hosts", ws_deployed: 8, ws_licenses_required: "32 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,false,true,false] },
+      { unit_id: "17", unit_name: "AU & DE", subsidiary: "Martin Braun", country: "Germany", questionnaire_status: "Complete", response_rate: 90, priority: "High", critical_points: "DRS enabled = Datacenter required; 9x WS 2012 EOS", missing_data: "", infrastructure_summary: "10 ESXi hosts (160 cores), 2 clusters with DRS", ws_deployed: 45, ws_licenses_required: "160 cores DC", sql_deployed: "Enterprise", sql_licenses_required: "Enterprise", rds_deployed: 3, rds_licenses_required: "300 CALs", steps: [true,true,true,true,true,true,true,true,false] },
+    ];
+
+    // License Requirements with Editions (calculated from data)
+    const LICENSE_REQUIREMENTS = {
+      ws_datacenter: 420, // cores
+      ws_standard: 344,   // cores
+      ws_total_deployed: 334, // servers
+      sql_enterprise: 50, // cores
+      sql_standard: 48,   // cores
+      sql_cals: 72,       // CALs
+      sql_total_deployed: 31, // instances
+      rds_cals: 1169,     // User CALs
+      rds_deployed: 13,   // servers
+    };
+
+    // License data for doughnut chart
+    const LICENSE_CHART_DATA = [
+      { label: "WS Datacenter", value: 420, color: "#3b82f6", gradientStart: "#93c5fd", gradientEnd: "#1d4ed8" },
+      { label: "WS Standard", value: 344, color: "#8b5cf6", gradientStart: "#c4b5fd", gradientEnd: "#6d28d9" },
+      { label: "SQL Enterprise", value: 50, color: "#f43f5e", gradientStart: "#fda4af", gradientEnd: "#be123c" },
+      { label: "SQL Standard", value: 48, color: "#f59e0b", gradientStart: "#fde047", gradientEnd: "#d97706" },
+      { label: "RDS CALs", value: 1169, color: "#06b6d4", gradientStart: "#67e8f9", gradientEnd: "#0891b2" },
+    ];
+
+    // Enhanced Doughnut Chart Component - LARGE with side legend
+    function DoughnutChart({ data }) {
+      const total = data.reduce((sum, item) => sum + item.value, 0);
+      const size = 280;
+      const strokeWidth = 42;
+      const radius = (size - strokeWidth) / 2;
+      const circumference = 2 * Math.PI * radius;
+      
+      let currentOffset = 0;
+      
+      return (
+        <>
+          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{display:'block'}}>
+            <defs>
+              {data.map((item, i) => (
+                <linearGradient key={i} id={`grad-${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={item.gradientStart} />
+                  <stop offset="50%" stopColor={item.color} />
+                  <stop offset="100%" stopColor={item.gradientEnd} />
+                </linearGradient>
+              ))}
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            
+            <circle
+              cx={size/2}
+              cy={size/2}
+              r={radius}
+              fill="none"
+              stroke="rgba(255,255,255,0.06)"
+              strokeWidth={strokeWidth}
+            />
+            
+            {data.map((item, index) => {
+              const percentage = item.value / total;
+              const strokeDasharray = `${percentage * circumference} ${circumference}`;
+              const rotation = currentOffset * 360 - 90;
+              currentOffset += percentage;
+              
+              return (
+                <circle
+                  key={index}
+                  cx={size/2}
+                  cy={size/2}
+                  r={radius}
+                  fill="none"
+                  stroke={`url(#grad-${index})`}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={strokeDasharray}
+                  strokeLinecap="round"
+                  transform={`rotate(${rotation} ${size/2} ${size/2})`}
+                  filter="url(#glow)"
+                  style={{ transition: 'all 0.5s ease' }}
+                />
+              );
+            })}
+          </svg>
+          <div className="doughnut-center">
+            <div className="doughnut-center-value">{total.toLocaleString().replace(',', ' ')}</div>
+            <div className="doughnut-center-label">Total Units</div>
+          </div>
+        </>
+      );
+    }
+
+    async function fetchGoogleSheetsData() {
+      const { API_KEY, SPREADSHEET_ID, SHEET_NAME } = CONFIG.GOOGLE_SHEETS;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch');
+      const data = await response.json();
+      const rows = data.values;
+      if (!rows || rows.length < 2) return [];
+      const headers = rows[0];
+      return rows.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((h, i) => {
+          const key = h.toLowerCase().replace(/\s+/g, '_');
+          let val = row[i] || '';
+          if (['response_rate','ws_deployed','sql_deployed','rds_deployed'].includes(key)) val = val === '' ? '' : parseInt(val) || 0;
+          if (key === 'steps') val = val.split(',').map(v => v.trim().toLowerCase() === 'true');
+          obj[key] = val;
+        });
+        if (!obj.steps || !Array.isArray(obj.steps)) obj.steps = Array(9).fill(false);
+        if (!obj.subsidiary) obj.subsidiary = 'Martin Braun';
+        return obj;
+      });
+    }
+
+    function App() {
+      const [data, setData] = React.useState(DEFAULT_DATA);
+      const [loading, setLoading] = React.useState(false);
+      const [lastUpdate, setLastUpdate] = React.useState(new Date());
+      const [activeTab, setActiveTab] = React.useState("all");
+      const [searchTerm, setSearchTerm] = React.useState("");
+      const [selectedBU, setSelectedBU] = React.useState(null);
+      const [subsidiaryFilter, setSubsidiaryFilter] = React.useState("all");
+
+      React.useEffect(() => {
+        if (!CONFIG.GOOGLE_SHEETS.ENABLED) return;
+        const load = async () => {
+          setLoading(true);
+          try { const d = await fetchGoogleSheetsData(); if (d.length) setData(d); setLastUpdate(new Date()); } catch(e) { console.error(e); }
+          setLoading(false);
+        };
+        load();
+        if (CONFIG.AUTO_REFRESH_MINUTES > 0) { const i = setInterval(load, CONFIG.AUTO_REFRESH_MINUTES * 60000); return () => clearInterval(i); }
+      }, []);
+
+      const subsidiaryFiltered = subsidiaryFilter === "all" 
+        ? data 
+        : data.filter(bu => bu.subsidiary === subsidiaryFilter);
+
+      const filtered = subsidiaryFiltered.filter(bu => {
+        const match = bu.unit_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      bu.country.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      bu.unit_id.toLowerCase().includes(searchTerm.toLowerCase());
+        if (activeTab === "all") return match;
+        if (activeTab === "high") return match && (bu.priority === "High" || bu.priority === "Critical");
+        if (activeTab === "pending") return match && (bu.questionnaire_status === "Pending" || bu.response_rate < 70);
+        if (activeTab === "complete") return match && bu.questionnaire_status === "Complete";
+        return match;
+      });
+
+      const activeData = subsidiaryFiltered.filter(b => b.questionnaire_status !== "Out of Scope");
+      const kpis = { 
+        total: activeData.length, 
+        complete: activeData.filter(b => b.questionnaire_status === "Complete").length,
+        avg: activeData.length > 0 ? Math.round(activeData.reduce((a,b) => a + (b.response_rate||0), 0) / activeData.length) : 0, 
+        critical: activeData.filter(b => b.priority === "Critical" || b.priority === "High").length, 
+        pending: activeData.filter(b => b.questionnaire_status === "Pending").length
+      };
+
+      const statusClass = s => {
+        if (s === "Complete") return "complete";
+        if (s === "Received") return "received";
+        if (s === "Pending") return "pending";
+        if (s === "Incomplete") return "incomplete";
+        if (s === "Out of Scope") return "out-of-scope";
+        return "not-sent";
+      };
+      const hasLicense = bu => bu.ws_deployed !== '' || bu.sql_deployed !== '' || bu.rds_deployed !== '';
+
+      return (
+        <div className="app-container">
+          <header className="header">
+            <div className="logo-section">
+              <svg className="logo-img" viewBox="0 0 200 50"><circle cx="12" cy="12" r="5" fill="#E87A2A"/><circle cx="22" cy="8" r="8" fill="#E87A2A"/><circle cx="12" cy="28" r="8" fill="#E87A2A"/><circle cx="22" cy="38" r="5" fill="#E87A2A"/><circle cx="8" cy="40" r="4" fill="#E87A2A"/><text x="38" y="32" fontFamily="DM Sans" fontSize="24" fontWeight="700" fill="white">appstrato</text></svg>
+              <div className="logo-text"><h1>Microsoft Licensing Tracker</h1><span>Oetker Collection</span></div>
+            </div>
+            <div className="header-right">
+              <div className="subsidiary-filter">
+                <label>Subsidiary:</label>
+                <select value={subsidiaryFilter} onChange={e => setSubsidiaryFilter(e.target.value)}>
+                  <option value="all">All Subsidiaries</option>
+                  <option value="Martin Braun">Martin Braun</option>
+                  <option value="Budenheim">Budenheim</option>
+                </select>
+              </div>
+              <div>
+                <div className="last-update">Updated: {lastUpdate.toLocaleString()}</div>
+                {loading && <div className="loading-indicator"><div className="loading-dot"></div> Syncing...</div>}
+              </div>
+            </div>
+          </header>
+
+          {/* KPI Grid - 5 cards */}
+          <div className="kpi-grid">
+            <div className="kpi-card"><div className="kpi-label">Total BUs</div><div className="kpi-value">{kpis.total}</div></div>
+            <div className="kpi-card green"><div className="kpi-label">Complete</div><div className="kpi-value">{kpis.complete}</div><div className="kpi-subtitle">{kpis.total > 0 ? Math.round(kpis.complete/kpis.total*100) : 0}%</div></div>
+            <div className="kpi-card"><div className="kpi-label">Avg Response</div><div className="kpi-value">{kpis.avg}%</div></div>
+            <div className="kpi-card red"><div className="kpi-label">Critical/High</div><div className="kpi-value">{kpis.critical}</div></div>
+            <div className="kpi-card yellow"><div className="kpi-label">Pending</div><div className="kpi-value">{kpis.pending}</div></div>
+          </div>
+
+          {/* Main License Section */}
+          <div className="license-section">
+            {/* LEFT: Large Doughnut with Side Legend */}
+            <div className="doughnut-panel">
+              <div className="doughnut-panel-header">
+                <span className="doughnut-panel-title">License Distribution</span>
+              </div>
+              <div className="doughnut-panel-content">
+                <div className="doughnut-wrapper-large">
+                  <DoughnutChart data={LICENSE_CHART_DATA} />
+                </div>
+                <div className="doughnut-legend-side">
+                  {LICENSE_CHART_DATA.map((item, index) => (
+                    <div key={index} className="legend-item-side">
+                      <div className="legend-left-side">
+                        <div className="legend-color-side" style={{ background: `linear-gradient(135deg, ${item.gradientStart}, ${item.gradientEnd})` }}></div>
+                        <span className="legend-label-side">{item.label}</span>
+                      </div>
+                      <span className="legend-value-side">{item.value.toLocaleString().replace(',', ' ')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* End of Support Card */}
+              <div className="eos-card">
+                <div className="eos-header">
+                  <span className="eos-icon">⚠️</span>
+                  <span className="eos-title">End of Support Systems</span>
+                </div>
+                <div className="eos-value">14 <span className="eos-value-label">VMs running unsupported Windows</span></div>
+                <div className="eos-breakdown">
+                  <div className="eos-item"><span className="eos-dot critical"></span><span>WS 2008 R2:</span><span className="eos-count">2</span></div>
+                  <div className="eos-item"><span className="eos-dot high"></span><span>WS 2012:</span><span className="eos-count">3</span></div>
+                  <div className="eos-item"><span className="eos-dot medium"></span><span>WS 2012 R2:</span><span className="eos-count">9</span></div>
+                </div>
+                <div className="eos-affected">Affected: MBI-Zerouno, Polen Food, AU & DE</div>
+              </div>
+            </div>
+            <div className="license-cards-wrapper">
+              <div className="license-cards-header">
+                <span className="license-cards-title">Total License Requirements</span>
+                <span className="estimated-badge">Estimated</span>
+              </div>
+              <div className="license-cards-stack">
+                {/* Windows Server Card with Editions */}
+                <div className="license-card">
+                  <div className="license-card-header">
+                    <div className="license-card-icon ws">🖥️</div>
+                    <span className="license-card-title">Windows Server</span>
+                  </div>
+                  <div className="license-card-value">{(LICENSE_REQUIREMENTS.ws_datacenter + LICENSE_REQUIREMENTS.ws_standard).toLocaleString()} cores*</div>
+                  <div className="license-card-detail">{LICENSE_REQUIREMENTS.ws_total_deployed} servers deployed</div>
+                  <div className="license-card-editions">
+                    <div className="edition-item">
+                      <span className="edition-dot dc"></span>
+                      <span className="edition-label">Datacenter:</span>
+                      <span className="edition-value">{LICENSE_REQUIREMENTS.ws_datacenter}c</span>
+                    </div>
+                    <div className="edition-item">
+                      <span className="edition-dot std"></span>
+                      <span className="edition-label">Standard:</span>
+                      <span className="edition-value">{LICENSE_REQUIREMENTS.ws_standard}c</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SQL Server Card with Editions */}
+                <div className="license-card">
+                  <div className="license-card-header">
+                    <div className="license-card-icon sql">🗄️</div>
+                    <span className="license-card-title">SQL Server</span>
+                  </div>
+                  <div className="license-card-value">{LICENSE_REQUIREMENTS.sql_enterprise + LICENSE_REQUIREMENTS.sql_standard} cores + {LICENSE_REQUIREMENTS.sql_cals} CALs*</div>
+                  <div className="license-card-detail">{LICENSE_REQUIREMENTS.sql_total_deployed} instances deployed</div>
+                  <div className="license-card-editions">
+                    <div className="edition-item">
+                      <span className="edition-dot ent"></span>
+                      <span className="edition-label">Enterprise:</span>
+                      <span className="edition-value">{LICENSE_REQUIREMENTS.sql_enterprise}c</span>
+                    </div>
+                    <div className="edition-item">
+                      <span className="edition-dot std-sql"></span>
+                      <span className="edition-label">Standard:</span>
+                      <span className="edition-value">{LICENSE_REQUIREMENTS.sql_standard}c</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RDS Card */}
+                <div className="license-card">
+                  <div className="license-card-header">
+                    <div className="license-card-icon rds">👥</div>
+                    <span className="license-card-title">Remote Desktop Services</span>
+                  </div>
+                  <div className="license-card-value">{LICENSE_REQUIREMENTS.rds_cals.toLocaleString()} User CALs</div>
+                  <div className="license-card-detail">{LICENSE_REQUIREMENTS.rds_deployed} RDS servers deployed</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{fontSize:'0.7rem',color:'rgba(255,255,255,0.4)',marginTop:'-1.5rem',marginBottom:'1.5rem'}}>* Some BUs have pending data (TBD) - totals may increase</div>
+
+          <div className="tabs-container">
+            {[{id:"all",label:"All"},{id:"high",label:"Critical/High"},{id:"pending",label:"Pending"},{id:"complete",label:"Complete"}].map(t => <button key={t.id} className={`tab ${activeTab===t.id?'active':''}`} onClick={() => setActiveTab(t.id)}>{t.label}</button>)}
+          </div>
+
+          <div className="filter-bar"><input className="search-input" placeholder="🔍 Search by name, country, or ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+
+          <div className="bu-grid">
+            {filtered.map(bu => (
+              <div key={bu.unit_id} className="bu-card" onClick={() => setSelectedBU(bu)}>
+                {bu.priority && bu.priority !== '' && <span className={`priority-badge ${bu.priority.toLowerCase()}`}>{bu.priority}</span>}
+                <div className="bu-card-header">
+                  <div>
+                    <span className="bu-unit-badge">Unit {bu.unit_id}</span>
+                    <div className="bu-name">{bu.unit_name}</div>
+                    <div className="bu-country">📍 {bu.country}</div>
+                    <div className="bu-subsidiary">
+                      <span className={`subsidiary-tag ${bu.subsidiary === 'Budenheim' ? 'budenheim' : 'martin-braun'}`}>{bu.subsidiary}</span>
+                    </div>
+                  </div>
+                  <span className={`status-badge ${statusClass(bu.questionnaire_status)}`}><span className="status-dot"></span>{bu.questionnaire_status}</span>
+                </div>
+                {bu.infrastructure_summary && <div className="bu-infra-summary">🏗️ {bu.infrastructure_summary}</div>}
+                <div className="progress-section"><div className="progress-header"><span className="progress-label">Response Rate</span><span className="progress-value">{bu.response_rate}%</span></div><div className="progress-bar"><div className="progress-fill" style={{width:`${bu.response_rate}%`}}></div></div></div>
+                <div className="license-summary">
+                  {bu.ws_deployed !== '' && <span className="license-tag ws">🖥️ WS: {bu.ws_deployed}</span>}
+                  {bu.sql_deployed !== '' && <span className="license-tag sql">🗄️ SQL: {bu.sql_deployed}</span>}
+                  {bu.rds_deployed !== '' && <span className="license-tag rds">👥 RDS: {bu.rds_deployed}</span>}
+                  {!hasLicense(bu) && <span className="no-data">No license data yet</span>}
+                </div>
+                <div className="checklist-mini">{(bu.steps||[]).map((d,i) => <div key={i} className={`check-dot ${d?'done':''}`}></div>)}</div>
+              </div>
+            ))}
+          </div>
+
+          {selectedBU && (
+            <div className="modal-overlay" onClick={() => setSelectedBU(null)}>
+              <div className="modal-content" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div>
+                    <span className="bu-unit-badge">Unit {selectedBU.unit_id}</span>
+                    <h2 style={{fontSize:'1.5rem',marginTop:'0.5rem',color:'var(--text-primary)'}}>{selectedBU.unit_name}</h2>
+                    <div className="bu-country">📍 {selectedBU.country}</div>
+                    <div style={{marginTop:'0.5rem'}}><span className={`subsidiary-tag ${selectedBU.subsidiary === 'Budenheim' ? 'budenheim' : 'martin-braun'}`}>{selectedBU.subsidiary}</span></div>
+                  </div>
+                  <button className="modal-close" onClick={() => setSelectedBU(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div className="detail-section"><h3>Status</h3>
+                    <div className="info-grid">
+                      <div className="info-item"><div className="info-label">Status</div><div className="info-value">{selectedBU.questionnaire_status}</div></div>
+                      <div className="info-item"><div className="info-label">Response</div><div className="info-value">{selectedBU.response_rate}%</div></div>
+                      <div className="info-item"><div className="info-label">Priority</div><div className="info-value">{selectedBU.priority || '—'}</div></div>
+                      <div className="info-item"><div className="info-label">Country</div><div className="info-value">{selectedBU.country}</div></div>
+                      {selectedBU.infrastructure_summary && <div className="info-item full-width"><div className="info-label">Infrastructure Summary</div><div className="info-value infra">🏗️ {selectedBU.infrastructure_summary}</div></div>}
+                    </div>
+                  </div>
+                  <div className="detail-section"><h3>License Requirements</h3><table className="license-table"><thead><tr><th>Product</th><th>Deployed</th><th>Required</th></tr></thead><tbody><tr><td><div className="product-cell"><span className="product-icon ws">WS</span>Windows Server</div></td><td className="value-cell">{selectedBU.ws_deployed!==''?selectedBU.ws_deployed:'—'}</td><td className="required-cell">{selectedBU.ws_licenses_required||'—'}</td></tr><tr><td><div className="product-cell"><span className="product-icon sql">SQL</span>SQL Server</div></td><td className="value-cell">{selectedBU.sql_deployed!==''?selectedBU.sql_deployed:'—'}</td><td className="required-cell">{selectedBU.sql_licenses_required||'—'}</td></tr><tr><td><div className="product-cell"><span className="product-icon rds">RDS</span>Remote Desktop</div></td><td className="value-cell">{selectedBU.rds_deployed!==''?selectedBU.rds_deployed:'—'}</td><td className="required-cell">{selectedBU.rds_licenses_required||'—'}</td></tr></tbody></table></div>
+                  {selectedBU.critical_points && <div className="detail-section"><h3>Critical Points</h3><div className="alert-box"><div className="alert-title">⚠️ Attention</div><div className="alert-content">{selectedBU.critical_points}</div></div></div>}
+                  {selectedBU.missing_data && <div className="detail-section"><h3>Missing Data</h3><div className="alert-box warning"><div className="alert-title">📋 Requested</div><div className="alert-content">{selectedBU.missing_data}</div></div></div>}
+                  <div className="detail-section"><h3>Workflow</h3><div className="checklist-full">{WORKFLOW_STEPS.map((s,i) => <div key={i} className="checklist-item"><div className={`checklist-checkbox ${(selectedBU.steps||[])[i]?'checked':''}`}></div><span className={`checklist-text ${(selectedBU.steps||[])[i]?'done':''}`}>{s}</span></div>)}</div></div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
