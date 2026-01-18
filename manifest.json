@@ -1,0 +1,26 @@
+{
+  "name": "Microsoft Licensing Tracker - Oetker Collection",
+  "short_name": "MS Licensing",
+  "description": "SAM Dashboard for Microsoft Server Licensing Analysis",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%231a1a2e' width='512' height='512' rx='100'/><circle cx='153' cy='153' r='61' fill='%23E87A2A'/><circle cx='256' cy='112' r='92' fill='%23E87A2A'/><circle cx='153' cy='307' r='92' fill='%23E87A2A'/><circle cx='256' cy='384' r='61' fill='%23E87A2A'/><circle cx='112' cy='400' r='41' fill='%23E87A2A'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a1a2e' width='192' height='192' rx='40'/><circle cx='57' cy='57' r='23' fill='%23E87A2A'/><circle cx='96' cy='42' r='35' fill='%23E87A2A'/><circle cx='57' cy='115' r='35' fill='%23E87A2A'/><circle cx='96' cy='144' r='23' fill='%23E87A2A'/><circle cx='42' cy='150' r='15' fill='%23E87A2A'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "en"
+}
