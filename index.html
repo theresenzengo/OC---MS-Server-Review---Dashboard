@@ -192,11 +192,93 @@
       gap: 1rem;
       flex: 1;
     }
+    .compliance-row {
+      display: flex;
+      gap: 1rem;
+      align-items: stretch;
+    }
     .compliance-bar-item {
       background: var(--card-dark);
       border-radius: 12px;
       padding: 1rem 1.25rem;
       border: 1px solid rgba(255,255,255,0.08);
+      flex: 1;
+    }
+    
+    /* License Recommendation Card */
+    .license-rec-card {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      width: 150px;
+      min-width: 150px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .license-rec-card.compliant {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .license-rec-header {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-bottom: 0.35rem;
+    }
+    .license-rec-icon {
+      font-size: 0.85rem;
+    }
+    .license-rec-title {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #fca5a5;
+    }
+    .license-rec-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+      color: #fca5a5;
+      line-height: 1;
+    }
+    .license-rec-sku {
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.6);
+      margin-top: 0.35rem;
+      line-height: 1.3;
+    }
+    .license-rec-check {
+      font-size: 1.5rem;
+      color: #34d399;
+      margin-bottom: 0.25rem;
+    }
+    .license-rec-status {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #34d399;
+    }
+    @media (max-width: 900px) {
+      .compliance-row {
+        flex-direction: column;
+      }
+      .license-rec-card {
+        min-width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+      }
+      .license-rec-header {
+        margin-bottom: 0;
+      }
+      .license-rec-value {
+        font-size: 1.2rem;
+      }
     }
     .compliance-bar-header {
       display: flex;
@@ -674,47 +756,74 @@
       { unit_id: "17", unit_name: "AU & DE", subsidiary: "Martin Braun", country: "Germany", questionnaire_status: "Complete", response_rate: 90, priority: "High", critical_points: "DRS enabled = Datacenter required; 9x WS 2012 EOS", missing_data: "", infrastructure_summary: "10 ESXi hosts (160 cores), 2 clusters with DRS", ws_deployed: 45, ws_licenses_required: "160 cores DC", sql_deployed: "Enterprise", sql_licenses_required: "Enterprise", rds_deployed: 3, rds_licenses_required: "300 CALs", steps: [true,true,true,true,true,true,true,true,false] },
     ];
 
-    // Compliance Bar Component
-    function ComplianceBar({ label, metric, required, entitled, icon }) {
+    // Compliance Bar Component with License Recommendation
+    function ComplianceBar({ label, metric, required, entitled, icon, sku }) {
       const percentage = entitled > 0 ? Math.round((required / entitled) * 100) : (required > 0 ? 999 : 0);
       const isCompliant = percentage <= 100;
       const isWarning = percentage > 80 && percentage <= 100;
       const isOver = percentage > 100;
       const gap = entitled - required;
       const fillWidth = Math.min(isOver ? 100 : percentage, 100);
+      const deficit = gap < 0 ? Math.abs(gap) : 0;
+      
+      // Calculate packs needed (2-core packs for cores, 1:1 for CALs)
+      const isCAL = metric.toLowerCase().includes('cal');
+      const packsNeeded = isCAL ? deficit : Math.ceil(deficit / 2);
       
       let statusClass = 'compliant';
       if (isOver) statusClass = 'over';
       else if (isWarning) statusClass = 'warning';
       
       return (
-        <div className="compliance-bar-item">
-          <div className="compliance-bar-header">
-            <div className="compliance-bar-label">
-              <span>{icon}</span>
-              <span>{label}</span>
-              <span className="compliance-bar-metric">{metric}</span>
+        <div className="compliance-row">
+          <div className="compliance-bar-item">
+            <div className="compliance-bar-header">
+              <div className="compliance-bar-label">
+                <span>{icon}</span>
+                <span>{label}</span>
+                <span className="compliance-bar-metric">{metric}</span>
+              </div>
+              <div className="compliance-bar-values">
+                <span className="required">{required.toLocaleString()}</span>
+                <span className="entitled"> / {entitled.toLocaleString()}</span>
+              </div>
             </div>
-            <div className="compliance-bar-values">
-              <span className="required">{required.toLocaleString()}</span>
-              <span className="entitled"> / {entitled.toLocaleString()}</span>
+            <div className="compliance-bar-container">
+              <div 
+                className={`compliance-bar-fill ${statusClass}`}
+                style={{ width: `${fillWidth}%` }}
+              />
+              {entitled > 0 && <div className="compliance-bar-marker" style={{ left: `${Math.min(100, (entitled / Math.max(required, entitled)) * 100)}%` }}></div>}
+            </div>
+            <div className="compliance-bar-footer">
+              <span className={`compliance-percentage ${statusClass}`}>
+                {percentage > 999 ? '∞' : `${percentage}%`} {isCompliant ? '✓' : '⚠'}
+              </span>
+              <span className={`compliance-gap ${gap >= 0 ? 'surplus' : 'deficit'}`}>
+                {gap >= 0 ? `+${gap.toLocaleString()}` : `${gap.toLocaleString()}`} {isCAL ? 'CALs' : 'cores'}
+              </span>
             </div>
           </div>
-          <div className="compliance-bar-container">
-            <div 
-              className={`compliance-bar-fill ${statusClass}`}
-              style={{ width: `${fillWidth}%` }}
-            />
-            {entitled > 0 && <div className="compliance-bar-marker" style={{ left: `${Math.min(100, (entitled / Math.max(required, entitled)) * 100)}%` }}></div>}
-          </div>
-          <div className="compliance-bar-footer">
-            <span className={`compliance-percentage ${statusClass}`}>
-              {percentage > 999 ? '∞' : `${percentage}%`} {isCompliant ? '✓' : '⚠'}
-            </span>
-            <span className={`compliance-gap ${gap >= 0 ? 'surplus' : 'deficit'}`}>
-              {gap >= 0 ? `+${gap.toLocaleString()}` : `${gap.toLocaleString()}`} {metric.toLowerCase().includes('cal') ? 'CALs' : 'cores'}
-            </span>
-          </div>
+          
+          {/* License Recommendation Card */}
+          {deficit > 0 && sku && (
+            <div className="license-rec-card">
+              <div className="license-rec-header">
+                <span className="license-rec-icon">📦</span>
+                <span className="license-rec-title">Required</span>
+              </div>
+              <div className="license-rec-value">{packsNeeded.toLocaleString()}</div>
+              <div className="license-rec-sku">{sku}</div>
+            </div>
+          )}
+          
+          {/* Compliant badge */}
+          {deficit === 0 && (
+            <div className="license-rec-card compliant">
+              <div className="license-rec-check">✓</div>
+              <div className="license-rec-status">Compliant</div>
+            </div>
+          )}
         </div>
       );
     }
@@ -785,13 +894,14 @@
       // Calculate aggregated license data based on filter
       const getAggregatedLicenses = () => {
         if (subsidiaryFilter === "all") {
-          // Sum all subsidiaries
+          // Sum only subsidiaries with deployment data (hasData: true)
+          const analyzedSubs = Object.entries(LICENSE_ENTITLEMENTS).filter(([_, s]) => s.hasData);
           const entitled = {
-            ws_standard: Object.values(LICENSE_ENTITLEMENTS).reduce((sum, s) => sum + s.ws_standard, 0),
-            ws_datacenter: Object.values(LICENSE_ENTITLEMENTS).reduce((sum, s) => sum + s.ws_datacenter, 0),
-            sql_standard: Object.values(LICENSE_ENTITLEMENTS).reduce((sum, s) => sum + s.sql_standard, 0),
-            sql_enterprise: Object.values(LICENSE_ENTITLEMENTS).reduce((sum, s) => sum + s.sql_enterprise, 0),
-            rds_cals: Object.values(LICENSE_ENTITLEMENTS).reduce((sum, s) => sum + s.rds_cals, 0),
+            ws_standard: analyzedSubs.reduce((sum, [_, s]) => sum + s.ws_standard, 0),
+            ws_datacenter: analyzedSubs.reduce((sum, [_, s]) => sum + s.ws_datacenter, 0),
+            sql_standard: analyzedSubs.reduce((sum, [_, s]) => sum + s.sql_standard, 0),
+            sql_enterprise: analyzedSubs.reduce((sum, [_, s]) => sum + s.sql_enterprise, 0),
+            rds_cals: analyzedSubs.reduce((sum, [_, s]) => sum + s.rds_cals, 0),
           };
           const required = {
             ws_standard: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.ws_standard, 0),
@@ -803,7 +913,7 @@
             sql_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.sql_deployed, 0),
             rds_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.rds_deployed, 0),
           };
-          const hasData = Object.values(LICENSE_ENTITLEMENTS).some(s => s.hasData);
+          const hasData = analyzedSubs.length > 0;
           return { entitled, required, hasData };
         } else {
           const entitled = LICENSE_ENTITLEMENTS[subsidiaryFilter] || {};
@@ -895,6 +1005,7 @@
                     required={required.ws_datacenter || 0} 
                     entitled={entitled.ws_datacenter || 0}
                     icon="🖥️"
+                    sku="WS Datacenter 2-Core LIC+SA"
                   />
                   <ComplianceBar 
                     label="Windows Server Standard" 
@@ -902,6 +1013,7 @@
                     required={required.ws_standard || 0} 
                     entitled={entitled.ws_standard || 0}
                     icon="🖥️"
+                    sku="WS Standard 2-Core LIC+SA"
                   />
                   <ComplianceBar 
                     label="SQL Server Enterprise" 
@@ -909,6 +1021,7 @@
                     required={required.sql_enterprise || 0} 
                     entitled={entitled.sql_enterprise || 0}
                     icon="🗄️"
+                    sku="SQL Enterprise 2-Core LIC+SA"
                   />
                   <ComplianceBar 
                     label="SQL Server Standard" 
@@ -916,6 +1029,7 @@
                     required={required.sql_standard || 0} 
                     entitled={entitled.sql_standard || 0}
                     icon="🗄️"
+                    sku="SQL Standard 2-Core LIC+SA"
                   />
                   <ComplianceBar 
                     label="RDS User CALs" 
@@ -923,6 +1037,7 @@
                     required={required.rds_cals || 0} 
                     entitled={entitled.rds_cals || 0}
                     icon="👥"
+                    sku="RDS User CAL LIC+SA"
                   />
                 </div>
               ) : (
