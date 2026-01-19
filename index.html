@@ -616,6 +616,77 @@
       border-top: 1px solid rgba(255,255,255,0.1);
     }
     
+    /* Entitlements Modal */
+    .entitlements-modal {
+      background: linear-gradient(160deg, #1e3a5f 0%, #1a2744 50%, #1a1a2e 100%);
+      border-radius: 16px;
+      padding: 1.5rem;
+      max-width: 700px;
+      width: 95%;
+      max-height: 80vh;
+      overflow-y: auto;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    }
+    .entitlements-table-wrapper {
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    .entitlements-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .entitlements-table th {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.7);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      padding: 0.75rem 0.5rem;
+      text-align: right;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .entitlements-table th:first-child {
+      text-align: left;
+      padding-left: 1rem;
+    }
+    .entitlements-table td {
+      padding: 0.75rem 0.5rem;
+      text-align: right;
+      color: rgba(255,255,255,0.8);
+      font-family: 'Space Mono', monospace;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .entitlements-table td.sub-name {
+      text-align: left;
+      padding-left: 1rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      color: white;
+    }
+    .entitlements-table tbody tr:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    .entitlements-table tfoot tr {
+      background: rgba(232, 122, 42, 0.15);
+      border-top: 2px solid rgba(232, 122, 42, 0.3);
+    }
+    .entitlements-table tfoot td {
+      font-weight: 700;
+      color: #E87A2A;
+    }
+    .entitlements-table tfoot td.sub-name {
+      color: #E87A2A;
+    }
+    .entitlements-note {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.4);
+      font-style: italic;
+      margin-top: 0.5rem;
+    }
+    
     /* Tabs & Search */
     .tabs-container { 
       background: var(--gradient-card); 
@@ -1058,36 +1129,98 @@
       addText(`Pending Actions: ${kpis.pending}`);
       y += 10;
       
-      // License Compliance Status
+      // License Compliance Status - Visual Cards
       addTitle('License Compliance Status', 14);
       addLine();
       
       const products = [
-        { name: 'Windows Server Datacenter', req: required.ws_datacenter || 0, ent: entitled.ws_datacenter || 0, unit: 'cores' },
-        { name: 'Windows Server Standard', req: required.ws_standard || 0, ent: entitled.ws_standard || 0, unit: 'cores' },
-        { name: 'SQL Server Enterprise', req: required.sql_enterprise || 0, ent: entitled.sql_enterprise || 0, unit: 'cores' },
-        { name: 'SQL Server Standard', req: required.sql_standard || 0, ent: entitled.sql_standard || 0, unit: 'cores' },
-        { name: 'RDS User CALs', req: required.rds_cals || 0, ent: entitled.rds_cals || 0, unit: 'CALs' }
+        { name: 'Windows Server Datacenter', req: required.ws_datacenter || 0, ent: entitled.ws_datacenter || 0, unit: 'cores', icon: '🖥️' },
+        { name: 'Windows Server Standard', req: required.ws_standard || 0, ent: entitled.ws_standard || 0, unit: 'cores', icon: '🖥️' },
+        { name: 'SQL Server Enterprise', req: required.sql_enterprise || 0, ent: entitled.sql_enterprise || 0, unit: 'cores', icon: '🗄️' },
+        { name: 'SQL Server Standard', req: required.sql_standard || 0, ent: entitled.sql_standard || 0, unit: 'cores', icon: '🗄️' },
+        { name: 'RDS User CALs', req: required.rds_cals || 0, ent: entitled.rds_cals || 0, unit: 'CALs', icon: '👥' }
       ];
       
-      products.forEach(p => {
-        const gap = p.ent - p.req;
-        const status = gap >= 0 ? '✓ Compliant' : '⚠ Gap';
-        const pct = p.ent > 0 ? Math.round((p.req / p.ent) * 100) : 0;
-        doc.setFont('helvetica', 'bold');
-        doc.text(p.name, margin, y);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`${p.req.toLocaleString()} / ${p.ent.toLocaleString()} ${p.unit} (${pct}%) - ${status} (${gap >= 0 ? '+' : ''}${gap.toLocaleString()})`, margin + 60, y);
-        y += 7;
-      });
-      y += 10;
+      const cardHeight = 22;
+      const barWidth = 90;
+      const cardWidth = pageWidth - 2 * margin;
       
-      // Purchase Recommendations
-      checkNewPage(60);
+      products.forEach(p => {
+        checkNewPage(cardHeight + 5);
+        const gap = p.ent - p.req;
+        const pct = p.ent > 0 ? Math.round((p.req / p.ent) * 100) : (p.req > 0 ? 999 : 0);
+        const isCompliant = gap >= 0;
+        const fillPct = Math.min(pct, 100) / 100;
+        
+        // Card background
+        doc.setFillColor(245, 247, 250);
+        doc.roundedRect(margin, y, cardWidth, cardHeight, 3, 3, 'F');
+        
+        // Product name
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(26, 26, 46);
+        doc.text(p.name, margin + 5, y + 8);
+        
+        // Values (Required / Entitled)
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`${p.req.toLocaleString()} / ${p.ent.toLocaleString()} ${p.unit}`, margin + 5, y + 16);
+        
+        // Progress bar background
+        const barX = margin + 95;
+        const barY = y + 7;
+        const barHeight = 10;
+        doc.setFillColor(220, 220, 225);
+        doc.roundedRect(barX, barY, barWidth, barHeight, 2, 2, 'F');
+        
+        // Progress bar fill
+        if (fillPct > 0) {
+          if (isCompliant) {
+            doc.setFillColor(16, 185, 129); // Green
+          } else {
+            doc.setFillColor(239, 68, 68); // Red
+          }
+          doc.roundedRect(barX, barY, barWidth * fillPct, barHeight, 2, 2, 'F');
+        }
+        
+        // Percentage badge
+        const badgeX = barX + barWidth + 5;
+        if (isCompliant) {
+          doc.setFillColor(220, 252, 231); // Light green
+          doc.setTextColor(22, 163, 74); // Green text
+        } else {
+          doc.setFillColor(254, 226, 226); // Light red
+          doc.setTextColor(220, 38, 38); // Red text
+        }
+        doc.roundedRect(badgeX, barY, 25, barHeight, 2, 2, 'F');
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${pct > 999 ? '∞' : pct}%`, badgeX + 5, barY + 7);
+        
+        // Gap/Surplus indicator
+        const gapX = badgeX + 30;
+        doc.setFontSize(9);
+        if (isCompliant) {
+          doc.setTextColor(22, 163, 74);
+          doc.text(`+${gap.toLocaleString()}`, gapX, y + 14);
+        } else {
+          doc.setTextColor(220, 38, 38);
+          doc.text(`${gap.toLocaleString()}`, gapX, y + 14);
+        }
+        
+        y += cardHeight + 4;
+      });
+      y += 6;
+      
+      // Purchase Recommendations - Visual Cards
+      checkNewPage(80);
       addTitle('Purchase Recommendations', 14);
       addLine();
       
       let hasPurchase = false;
+      const purchaseItems = [];
       products.forEach(p => {
         const gap = p.ent - p.req;
         if (gap < 0) {
@@ -1095,30 +1228,121 @@
           const deficit = Math.abs(gap);
           const packs = p.unit === 'CALs' ? deficit : Math.ceil(deficit / 2);
           const sku = p.unit === 'CALs' ? 'RDS User CAL LIC+SA' : p.name.replace('Windows Server ', 'WS ').replace('SQL Server ', 'SQL ') + ' 2-Core LIC+SA';
-          addText(`• ${packs.toLocaleString()} x ${sku} (${deficit.toLocaleString()} ${p.unit} gap)`);
+          purchaseItems.push({ packs, sku, deficit, unit: p.unit });
         }
       });
-      if (!hasPurchase) {
-        addText('No immediate purchases required. Review renewal quantities below.');
-      }
-      y += 10;
       
-      // Renewal Recommendations
-      checkNewPage(60);
+      if (hasPurchase) {
+        const recCardWidth = (pageWidth - 2 * margin - 10) / 2;
+        const recCardHeight = 35;
+        let recX = margin;
+        let recRow = 0;
+        
+        purchaseItems.forEach((item, idx) => {
+          if (idx > 0 && idx % 2 === 0) {
+            y += recCardHeight + 5;
+            recX = margin;
+          }
+          
+          checkNewPage(recCardHeight + 10);
+          
+          // Card with gradient effect (red tint)
+          doc.setFillColor(254, 242, 242);
+          doc.roundedRect(recX, y, recCardWidth, recCardHeight, 4, 4, 'F');
+          doc.setDrawColor(252, 165, 165);
+          doc.roundedRect(recX, y, recCardWidth, recCardHeight, 4, 4, 'S');
+          
+          // Quantity
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(18);
+          doc.setTextColor(220, 38, 38);
+          doc.text(item.packs.toLocaleString(), recX + 8, y + 15);
+          
+          // SKU name
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(100, 100, 100);
+          const skuLines = doc.splitTextToSize(item.sku, recCardWidth - 16);
+          doc.text(skuLines, recX + 8, y + 23);
+          
+          // Gap info
+          doc.setFontSize(7);
+          doc.setTextColor(150, 150, 150);
+          doc.text(`(${item.deficit.toLocaleString()} ${item.unit} gap)`, recX + 8, y + 31);
+          
+          recX += recCardWidth + 10;
+        });
+        
+        y += recCardHeight + 10;
+      } else {
+        doc.setFillColor(240, 253, 244);
+        doc.roundedRect(margin, y, cardWidth, 20, 4, 4, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(22, 163, 74);
+        doc.text('✓ No immediate purchases required. Review renewal quantities below.', margin + 10, y + 13);
+        y += 28;
+      }
+      
+      // Renewal Recommendations - Visual Cards
+      checkNewPage(80);
       addTitle('Renewal Recommendations', 14);
       addLine();
-      addText('At next renewal, consider optimizing license quantities:');
-      y += 3;
       
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('At next renewal, consider optimizing license quantities:', margin, y);
+      y += 10;
+      
+      const renewItems = [];
       products.forEach(p => {
         const gap = p.ent - p.req;
         if (gap > 0 && p.req > 0) {
           const renewPacks = p.unit === 'CALs' ? p.req : Math.ceil(p.req / 2);
           const savePacks = p.unit === 'CALs' ? gap : Math.ceil(gap / 2);
-          addText(`• ${p.name}: Renew ${renewPacks.toLocaleString()} (save ${savePacks.toLocaleString()} packs)`);
+          renewItems.push({ name: p.name, renew: renewPacks, save: savePacks });
         }
       });
-      y += 10;
+      
+      if (renewItems.length > 0) {
+        renewItems.forEach(item => {
+          checkNewPage(25);
+          
+          // Green card for savings
+          doc.setFillColor(240, 253, 244);
+          doc.roundedRect(margin, y, cardWidth, 18, 3, 3, 'F');
+          doc.setDrawColor(134, 239, 172);
+          doc.roundedRect(margin, y, cardWidth, 18, 3, 3, 'S');
+          
+          // Product name
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(26, 26, 46);
+          doc.text(item.name, margin + 5, y + 11);
+          
+          // Renew value
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 100, 100);
+          doc.text(`Renew: ${item.renew.toLocaleString()}`, margin + 90, y + 11);
+          
+          // Savings badge
+          doc.setFillColor(22, 163, 74);
+          doc.roundedRect(margin + 140, y + 4, 30, 10, 2, 2, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          doc.setTextColor(255, 255, 255);
+          doc.text(`-${item.save.toLocaleString()}`, margin + 145, y + 11);
+          
+          y += 22;
+        });
+      } else {
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('No renewal optimization opportunities identified.', margin, y);
+        y += 10;
+      }
+      y += 5;
       
       // Remediation Plan
       checkNewPage(80);
@@ -1202,6 +1426,7 @@
       const [selectedBU, setSelectedBU] = React.useState(null);
       const [subsidiaryFilter, setSubsidiaryFilter] = React.useState("all");
       const [showEOS, setShowEOS] = React.useState(false);
+      const [showEntitlements, setShowEntitlements] = React.useState(false);
 
       React.useEffect(() => {
         if (!CONFIG.GOOGLE_SHEETS.ENABLED) return;
@@ -1344,6 +1569,9 @@
                   <span className="surplus-badge">💰 Unused licenses - potential reallocation</span>
                 )}
                 <div className="section-header-spacer"></div>
+                <button className="export-btn" onClick={() => setShowEntitlements(true)}>
+                  📜 Entitlements
+                </button>
                 <button className="export-btn" onClick={() => generatePDF(data, entitled, required, kpis)}>
                   📄 Export
                 </button>
@@ -1519,6 +1747,59 @@
                 </div>
                 <div className="eos-modal-affected">
                   <strong>Affected BUs:</strong> MBI-Zerouno, Polen Food, AU & DE
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showEntitlements && (
+            <div className="modal-overlay" onClick={() => setShowEntitlements(false)}>
+              <div className="entitlements-modal" onClick={e => e.stopPropagation()}>
+                <div className="eos-modal-header">
+                  <div className="eos-modal-title">
+                    <span>📜</span>
+                    <span>License Entitlements by Subsidiary</span>
+                  </div>
+                  <button className="eos-modal-close" onClick={() => setShowEntitlements(false)}>×</button>
+                </div>
+                <div className="entitlements-table-wrapper">
+                  <table className="entitlements-table">
+                    <thead>
+                      <tr>
+                        <th>Subsidiary</th>
+                        <th>WS DC</th>
+                        <th>WS Std</th>
+                        <th>SQL Ent</th>
+                        <th>SQL Std</th>
+                        <th>RDS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(LICENSE_ENTITLEMENTS).map(([name, ent]) => (
+                        <tr key={name}>
+                          <td className="sub-name">{name}</td>
+                          <td>{ent.ws_datacenter.toLocaleString()}</td>
+                          <td>{ent.ws_standard.toLocaleString()}</td>
+                          <td>{ent.sql_enterprise.toLocaleString()}</td>
+                          <td>{ent.sql_standard.toLocaleString()}</td>
+                          <td>{ent.rds_cals.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td className="sub-name">TOTAL</td>
+                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.ws_datacenter, 0).toLocaleString()}</td>
+                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.ws_standard, 0).toLocaleString()}</td>
+                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.sql_enterprise, 0).toLocaleString()}</td>
+                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.sql_standard, 0).toLocaleString()}</td>
+                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.rds_cals, 0).toLocaleString()}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <div className="entitlements-note">
+                  * Values based on contract/purchase records
                 </div>
               </div>
             </div>
