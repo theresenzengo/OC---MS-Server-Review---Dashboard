@@ -76,25 +76,24 @@
     .logo-text h1 { font-size: 1.4rem; font-weight: 700; color: var(--text-light); }
     .logo-text span { font-size: 0.85rem; color: rgba(255,255,255,0.7); }
     .header-right { display: flex; align-items: center; gap: 1.5rem; }
+    .section-header-spacer { flex: 1; }
     .export-btn {
-      background: linear-gradient(135deg, #E87A2A 0%, #F5923D 100%);
-      border: none;
-      color: white;
-      padding: 0.6rem 1.2rem;
-      border-radius: 10px;
+      background: transparent;
+      border: 1px solid rgba(232, 122, 42, 0.4);
+      color: #E87A2A;
+      width: 150px;
+      padding: 0.3rem 0.6rem;
+      border-radius: 8px;
       font-family: 'DM Sans', sans-serif;
-      font-size: 0.85rem;
-      font-weight: 600;
+      font-size: 0.75rem;
+      font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
-      box-shadow: 0 2px 8px rgba(232, 122, 42, 0.3);
+      text-align: center;
     }
     .export-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(232, 122, 42, 0.4);
-    }
-    .export-btn:active {
-      transform: translateY(0);
+      background: rgba(232, 122, 42, 0.1);
+      border-color: #E87A2A;
     }
     .last-update { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: rgba(255,255,255,0.6); }
     .loading-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--accent-orange); margin-top: 0.25rem; }
@@ -181,6 +180,12 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: rgba(255,255,255,0.7);
+    }
+    .estimated-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #E87A2A;
+      font-style: italic;
     }
     .pending-badge {
       font-size: 0.7rem;
@@ -1299,9 +1304,6 @@
                 <div className="logo-text"><h1>Microsoft Licensing Tracker</h1><span>Oetker Collection</span></div>
               </div>
               <div className="header-right">
-                <button className="export-btn" onClick={() => generatePDF(data, entitled, required, kpis)}>
-                  📄 Export PDF
-                </button>
                 <div className="subsidiary-filter">
                   <label>Subsidiary:</label>
                   <select value={subsidiaryFilter} onChange={e => setSubsidiaryFilter(e.target.value)}>
@@ -1334,12 +1336,17 @@
             <div className="compliance-panel">
               <div className="section-header">
                 <span className="section-title">License Compliance</span>
+                <span className="estimated-label">(Estimated)</span>
                 {subsidiaryFilter !== "all" && required.ws_datacenter === 0 && required.ws_standard === 0 && entitled.ws_standard > 0 && subsidiaryFilter === "Henkell Freixenet" && (
                   <span className="pending-badge">⏳ Deployment data pending</span>
                 )}
                 {subsidiaryFilter === "OE. Hotels" && (
                   <span className="surplus-badge">💰 Unused licenses - potential reallocation</span>
                 )}
+                <div className="section-header-spacer"></div>
+                <button className="export-btn" onClick={() => generatePDF(data, entitled, required, kpis)}>
+                  📄 Export
+                </button>
               </div>
               
               {hasData ? (
