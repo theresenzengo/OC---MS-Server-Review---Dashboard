@@ -1076,56 +1076,65 @@
     }
 
     async function fetchEntitlementsData() {
-      const { API_KEY, SPREADSHEET_ID, ENTITLEMENTS_SHEET } = CONFIG.GOOGLE_SHEETS;
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${ENTITLEMENTS_SHEET}?key=${API_KEY}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch entitlements');
-      const data = await response.json();
-      const rows = data.values;
-      if (!rows || rows.length < 2) return null;
-      const headers = rows[0];
-      const entitlements = {};
-      rows.slice(1).forEach(row => {
-        const subsidiary = row[0];
-        if (subsidiary) {
-          entitlements[subsidiary] = {
-            ws_datacenter: parseInt(row[1]) || 0,
-            ws_standard: parseInt(row[2]) || 0,
-            sql_enterprise: parseInt(row[3]) || 0,
-            sql_standard: parseInt(row[4]) || 0,
-            rds_cals: parseInt(row[5]) || 0,
-            hasData: true
-          };
-        }
-      });
-      return entitlements;
+      try {
+        const { API_KEY, SPREADSHEET_ID, ENTITLEMENTS_SHEET } = CONFIG.GOOGLE_SHEETS;
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${ENTITLEMENTS_SHEET}?key=${API_KEY}`;
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const data = await response.json();
+        const rows = data.values;
+        if (!rows || rows.length < 2) return null;
+        const entitlements = {};
+        rows.slice(1).forEach(row => {
+          const subsidiary = row[0];
+          if (subsidiary) {
+            entitlements[subsidiary] = {
+              ws_datacenter: parseInt(row[1]) || 0,
+              ws_standard: parseInt(row[2]) || 0,
+              sql_enterprise: parseInt(row[3]) || 0,
+              sql_standard: parseInt(row[4]) || 0,
+              rds_cals: parseInt(row[5]) || 0,
+              hasData: true
+            };
+          }
+        });
+        return Object.keys(entitlements).length > 0 ? entitlements : null;
+      } catch (e) {
+        console.error('Entitlements fetch failed:', e);
+        return null;
+      }
     }
 
     async function fetchRequirementsData() {
-      const { API_KEY, SPREADSHEET_ID, REQUIREMENTS_SHEET } = CONFIG.GOOGLE_SHEETS;
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${REQUIREMENTS_SHEET}?key=${API_KEY}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch requirements');
-      const data = await response.json();
-      const rows = data.values;
-      if (!rows || rows.length < 2) return null;
-      const requirements = {};
-      rows.slice(1).forEach(row => {
-        const subsidiary = row[0];
-        if (subsidiary) {
-          requirements[subsidiary] = {
-            ws_datacenter: parseInt(row[1]) || 0,
-            ws_standard: parseInt(row[2]) || 0,
-            sql_enterprise: parseInt(row[3]) || 0,
-            sql_standard: parseInt(row[4]) || 0,
-            rds_cals: parseInt(row[5]) || 0,
-            ws_deployed: parseInt(row[6]) || 0,
-            sql_deployed: parseInt(row[7]) || 0,
-            rds_deployed: parseInt(row[8]) || 0
-          };
-        }
-      });
-      return requirements;
+      try {
+        const { API_KEY, SPREADSHEET_ID, REQUIREMENTS_SHEET } = CONFIG.GOOGLE_SHEETS;
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${REQUIREMENTS_SHEET}?key=${API_KEY}`;
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const data = await response.json();
+        const rows = data.values;
+        if (!rows || rows.length < 2) return null;
+        const requirements = {};
+        rows.slice(1).forEach(row => {
+          const subsidiary = row[0];
+          if (subsidiary) {
+            requirements[subsidiary] = {
+              ws_datacenter: parseInt(row[1]) || 0,
+              ws_standard: parseInt(row[2]) || 0,
+              sql_enterprise: parseInt(row[3]) || 0,
+              sql_standard: parseInt(row[4]) || 0,
+              rds_cals: parseInt(row[5]) || 0,
+              ws_deployed: parseInt(row[6]) || 0,
+              sql_deployed: parseInt(row[7]) || 0,
+              rds_deployed: parseInt(row[8]) || 0
+            };
+          }
+        });
+        return Object.keys(requirements).length > 0 ? requirements : null;
+      } catch (e) {
+        console.error('Requirements fetch failed:', e);
+        return null;
+      }
     }
 
     // Generate PDF Report
