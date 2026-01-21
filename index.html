@@ -95,6 +95,16 @@
       background: rgba(232, 122, 42, 0.1);
       border-color: #E87A2A;
     }
+    .export-btn.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      border-color: rgba(150, 150, 150, 0.3);
+      color: #999;
+    }
+    .export-btn.disabled:hover {
+      background: transparent;
+      border-color: rgba(150, 150, 150, 0.3);
+    }
     .last-update { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: rgba(255,255,255,0.6); }
     .loading-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--accent-orange); margin-top: 0.25rem; }
     .loading-dot { width: 8px; height: 8px; background: var(--accent-orange); border-radius: 50%; animation: pulse 1.5s infinite; }
@@ -845,25 +855,25 @@
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const CONFIG = { GOOGLE_SHEETS: { ENABLED: true, API_KEY: 'AIzaSyD7F4sjl8DUYvfLBOq5N5cXm-AThaDnGdY', SPREADSHEET_ID: '1RldtkHxCkFH9iDVNxEuAW_C1bWSzOlNOv_e5aPjvBFc', SHEET_NAME: 'Data' }, AUTO_REFRESH_MINUTES: 5 };
+    const CONFIG = { GOOGLE_SHEETS: { ENABLED: true, API_KEY: 'AIzaSyD7F4sjl8DUYvfLBOq5N5cXm-AThaDnGdY', SPREADSHEET_ID: '1RldtkHxCkFH9iDVNxEuAW_C1bWSzOlNOv_e5aPjvBFc', SHEET_NAME: 'Data', ENTITLEMENTS_SHEET: 'Entitlements', REQUIREMENTS_SHEET: 'Requirements' }, AUTO_REFRESH_MINUTES: 5 };
     const WORKFLOW_STEPS = ["Questionnaire sent", "Questionnaire received", "Initial analysis", "Follow-up sent", "Additional data received", "RVTools received", "SQL scripts received", "Final analysis", "Report delivered"];
     
-    // License Entitlements by Subsidiary (from OC_Licences.xlsx)
-    const LICENSE_ENTITLEMENTS = {
+    // Default License Entitlements (fallback if Google Sheets fails)
+    const DEFAULT_ENTITLEMENTS = {
       "Budenheim": {
         ws_standard: 364,
         ws_datacenter: 30,
         sql_standard: 16,
-        sql_enterprise: 16,
+        sql_enterprise: 32,
         rds_cals: 100,
         hasData: true
       },
       "Martin Braun": {
-        ws_standard: 16,
+        ws_standard: 184,
         ws_datacenter: 172,
-        sql_standard: 4,
+        sql_standard: 9,
         sql_enterprise: 0,
-        rds_cals: 0,
+        rds_cals: 35,
         hasData: true
       },
       "Henkell Freixenet": {
@@ -871,21 +881,21 @@
         ws_datacenter: 90,
         sql_standard: 14,
         sql_enterprise: 0,
-        rds_cals: 50,
+        rds_cals: 62,
         hasData: true // Partial data - pending full analysis
       },
       "OE. Hotels": {
-        ws_standard: 128,
+        ws_standard: 160,
         ws_datacenter: 0,
-        sql_standard: 16,
+        sql_standard: 49,
         sql_enterprise: 0,
-        rds_cals: 0,
+        rds_cals: 3,
         hasData: true // Confirmed: No MS Server deployed, but has license entitlements
       }
     };
     
-    // License Requirements (deployed) by Subsidiary
-    const LICENSE_REQUIREMENTS = {
+    // Default License Requirements (fallback if Google Sheets fails)
+    const DEFAULT_REQUIREMENTS = {
       "Budenheim": {
         ws_standard: 248,
         ws_datacenter: 128,
@@ -1063,6 +1073,59 @@
         if (!obj.subsidiary) obj.subsidiary = 'Martin Braun';
         return obj;
       });
+    }
+
+    async function fetchEntitlementsData() {
+      const { API_KEY, SPREADSHEET_ID, ENTITLEMENTS_SHEET } = CONFIG.GOOGLE_SHEETS;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${ENTITLEMENTS_SHEET}?key=${API_KEY}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch entitlements');
+      const data = await response.json();
+      const rows = data.values;
+      if (!rows || rows.length < 2) return null;
+      const headers = rows[0];
+      const entitlements = {};
+      rows.slice(1).forEach(row => {
+        const subsidiary = row[0];
+        if (subsidiary) {
+          entitlements[subsidiary] = {
+            ws_datacenter: parseInt(row[1]) || 0,
+            ws_standard: parseInt(row[2]) || 0,
+            sql_enterprise: parseInt(row[3]) || 0,
+            sql_standard: parseInt(row[4]) || 0,
+            rds_cals: parseInt(row[5]) || 0,
+            hasData: true
+          };
+        }
+      });
+      return entitlements;
+    }
+
+    async function fetchRequirementsData() {
+      const { API_KEY, SPREADSHEET_ID, REQUIREMENTS_SHEET } = CONFIG.GOOGLE_SHEETS;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${REQUIREMENTS_SHEET}?key=${API_KEY}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch requirements');
+      const data = await response.json();
+      const rows = data.values;
+      if (!rows || rows.length < 2) return null;
+      const requirements = {};
+      rows.slice(1).forEach(row => {
+        const subsidiary = row[0];
+        if (subsidiary) {
+          requirements[subsidiary] = {
+            ws_datacenter: parseInt(row[1]) || 0,
+            ws_standard: parseInt(row[2]) || 0,
+            sql_enterprise: parseInt(row[3]) || 0,
+            sql_standard: parseInt(row[4]) || 0,
+            rds_cals: parseInt(row[5]) || 0,
+            ws_deployed: parseInt(row[6]) || 0,
+            sql_deployed: parseInt(row[7]) || 0,
+            rds_deployed: parseInt(row[8]) || 0
+          };
+        }
+      });
+      return requirements;
     }
 
     // Generate PDF Report
@@ -1419,6 +1482,7 @@
 
     function App() {
       const [data, setData] = React.useState(DEFAULT_DATA);
+      const [licenseEntitlements, setLicenseEntitlements] = React.useState(DEFAULT_ENTITLEMENTS);
       const [loading, setLoading] = React.useState(false);
       const [lastUpdate, setLastUpdate] = React.useState(new Date());
       const [activeTab, setActiveTab] = React.useState("all");
@@ -1427,12 +1491,21 @@
       const [subsidiaryFilter, setSubsidiaryFilter] = React.useState("all");
       const [showEOS, setShowEOS] = React.useState(false);
       const [showEntitlements, setShowEntitlements] = React.useState(false);
+      const [licenseRequirements, setLicenseRequirements] = React.useState(DEFAULT_REQUIREMENTS);
 
       React.useEffect(() => {
         if (!CONFIG.GOOGLE_SHEETS.ENABLED) return;
         const load = async () => {
           setLoading(true);
-          try { const d = await fetchGoogleSheetsData(); if (d.length) setData(d); setLastUpdate(new Date()); } catch(e) { console.error(e); }
+          try { 
+            const d = await fetchGoogleSheetsData(); 
+            if (d.length) setData(d); 
+            const ent = await fetchEntitlementsData();
+            if (ent) setLicenseEntitlements(ent);
+            const req = await fetchRequirementsData();
+            if (req) setLicenseRequirements(req);
+            setLastUpdate(new Date()); 
+          } catch(e) { console.error(e); }
           setLoading(false);
         };
         load();
@@ -1461,7 +1534,7 @@
       const getAggregatedLicenses = () => {
         if (subsidiaryFilter === "all") {
           // Sum only subsidiaries with deployment data (hasData: true)
-          const analyzedSubs = Object.entries(LICENSE_ENTITLEMENTS).filter(([_, s]) => s.hasData);
+          const analyzedSubs = Object.entries(licenseEntitlements).filter(([_, s]) => s.hasData);
           const entitled = {
             ws_standard: analyzedSubs.reduce((sum, [_, s]) => sum + s.ws_standard, 0),
             ws_datacenter: analyzedSubs.reduce((sum, [_, s]) => sum + s.ws_datacenter, 0),
@@ -1470,20 +1543,20 @@
             rds_cals: analyzedSubs.reduce((sum, [_, s]) => sum + s.rds_cals, 0),
           };
           const required = {
-            ws_standard: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.ws_standard, 0),
-            ws_datacenter: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.ws_datacenter, 0),
-            sql_standard: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.sql_standard, 0),
-            sql_enterprise: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.sql_enterprise, 0),
-            rds_cals: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.rds_cals, 0),
-            ws_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.ws_deployed, 0),
-            sql_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.sql_deployed, 0),
-            rds_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.rds_deployed, 0),
+            ws_standard: Object.values(licenseRequirements).reduce((sum, s) => sum + s.ws_standard, 0),
+            ws_datacenter: Object.values(licenseRequirements).reduce((sum, s) => sum + s.ws_datacenter, 0),
+            sql_standard: Object.values(licenseRequirements).reduce((sum, s) => sum + s.sql_standard, 0),
+            sql_enterprise: Object.values(licenseRequirements).reduce((sum, s) => sum + s.sql_enterprise, 0),
+            rds_cals: Object.values(licenseRequirements).reduce((sum, s) => sum + s.rds_cals, 0),
+            ws_deployed: Object.values(licenseRequirements).reduce((sum, s) => sum + s.ws_deployed, 0),
+            sql_deployed: Object.values(licenseRequirements).reduce((sum, s) => sum + s.sql_deployed, 0),
+            rds_deployed: Object.values(licenseRequirements).reduce((sum, s) => sum + s.rds_deployed, 0),
           };
           const hasData = analyzedSubs.length > 0;
           return { entitled, required, hasData };
         } else {
-          const entitled = LICENSE_ENTITLEMENTS[subsidiaryFilter] || {};
-          const required = LICENSE_REQUIREMENTS[subsidiaryFilter] || {};
+          const entitled = licenseEntitlements[subsidiaryFilter] || {};
+          const required = licenseRequirements[subsidiaryFilter] || {};
           const hasData = entitled.hasData || false;
           return { entitled, required, hasData };
         }
@@ -1534,7 +1607,7 @@
                   <select value={subsidiaryFilter} onChange={e => setSubsidiaryFilter(e.target.value)}>
                     <option value="all">All Subsidiaries</option>
                     {subsidiaries.map(s => (
-                      <option key={s} value={s}>{s} {!LICENSE_ENTITLEMENTS[s]?.hasData ? '(No data)' : ''}</option>
+                      <option key={s} value={s}>{s} {!licenseEntitlements[s]?.hasData ? '(No data)' : ''}</option>
                     ))}
                   </select>
                 </div>
@@ -1572,7 +1645,7 @@
                 <button className="export-btn" onClick={() => setShowEntitlements(true)}>
                   📜 Entitlements
                 </button>
-                <button className="export-btn" onClick={() => generatePDF(data, entitled, required, kpis)}>
+                <button className="export-btn disabled" disabled title="Will be activated upon completion">
                   📄 Export
                 </button>
               </div>
@@ -1775,7 +1848,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(LICENSE_ENTITLEMENTS).map(([name, ent]) => (
+                      {Object.entries(licenseEntitlements).map(([name, ent]) => (
                         <tr key={name}>
                           <td className="sub-name">{name}</td>
                           <td>{ent.ws_datacenter.toLocaleString()}</td>
@@ -1789,11 +1862,11 @@
                     <tfoot>
                       <tr>
                         <td className="sub-name">TOTAL</td>
-                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.ws_datacenter, 0).toLocaleString()}</td>
-                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.ws_standard, 0).toLocaleString()}</td>
-                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.sql_enterprise, 0).toLocaleString()}</td>
-                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.sql_standard, 0).toLocaleString()}</td>
-                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.rds_cals, 0).toLocaleString()}</td>
+                        <td>{Object.values(licenseEntitlements).reduce((s,e) => s + e.ws_datacenter, 0).toLocaleString()}</td>
+                        <td>{Object.values(licenseEntitlements).reduce((s,e) => s + e.ws_standard, 0).toLocaleString()}</td>
+                        <td>{Object.values(licenseEntitlements).reduce((s,e) => s + e.sql_enterprise, 0).toLocaleString()}</td>
+                        <td>{Object.values(licenseEntitlements).reduce((s,e) => s + e.sql_standard, 0).toLocaleString()}</td>
+                        <td>{Object.values(licenseEntitlements).reduce((s,e) => s + e.rds_cals, 0).toLocaleString()}</td>
                       </tr>
                     </tfoot>
                   </table>
