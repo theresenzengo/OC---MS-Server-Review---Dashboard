@@ -855,11 +855,11 @@
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const CONFIG = { GOOGLE_SHEETS: { ENABLED: true, API_KEY: 'AIzaSyD7F4sjl8DUYvfLBOq5N5cXm-AThaDnGdY', SPREADSHEET_ID: '1RldtkHxCkFH9iDVNxEuAW_C1bWSzOlNOv_e5aPjvBFc', SHEET_NAME: 'Data', ENTITLEMENTS_SHEET: 'Entitlements', REQUIREMENTS_SHEET: 'Requirements' }, AUTO_REFRESH_MINUTES: 5 };
+    const CONFIG = { GOOGLE_SHEETS: { ENABLED: true, API_KEY: 'AIzaSyD7F4sjl8DUYvfLBOq5N5cXm-AThaDnGdY', SPREADSHEET_ID: '1RldtkHxCkFH9iDVNxEuAW_C1bWSzOlNOv_e5aPjvBFc', SHEET_NAME: 'Data' }, AUTO_REFRESH_MINUTES: 5 };
     const WORKFLOW_STEPS = ["Questionnaire sent", "Questionnaire received", "Initial analysis", "Follow-up sent", "Additional data received", "RVTools received", "SQL scripts received", "Final analysis", "Report delivered"];
     
-    // Default License Entitlements (fallback if Google Sheets fails)
-    const DEFAULT_ENTITLEMENTS = {
+    // License Entitlements by Subsidiary (from OC_Licences.xlsx - updated)
+    const LICENSE_ENTITLEMENTS = {
       "Budenheim": {
         ws_standard: 364,
         ws_datacenter: 30,
@@ -894,8 +894,8 @@
       }
     };
     
-    // Default License Requirements (fallback if Google Sheets fails)
-    const DEFAULT_REQUIREMENTS = {
+    // License Requirements (deployed) by Subsidiary
+    const LICENSE_REQUIREMENTS = {
       "Budenheim": {
         ws_standard: 248,
         ws_datacenter: 128,
@@ -918,12 +918,12 @@
       },
       "Henkell Freixenet": {
         ws_standard: 0,
-        ws_datacenter: 0,
+        ws_datacenter: 144,
         sql_standard: 0,
         sql_enterprise: 0,
         rds_cals: 0,
-        ws_deployed: 0,
-        sql_deployed: 0,
+        ws_deployed: 128,
+        sql_deployed: 5,
         rds_deployed: 0
       },
       "OE. Hotels": {
@@ -956,7 +956,7 @@
       { unit_id: "15", unit_name: "Hoffs America", subsidiary: "Martin Braun", country: "USA", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "1 physical server", ws_deployed: 3, ws_licenses_required: "16 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: 1, rds_licenses_required: "25 CALs", steps: [true,true,true,true,true,true,false,true,false] },
       { unit_id: "16", unit_name: "CAP Fruit", subsidiary: "Martin Braun", country: "France", questionnaire_status: "Complete", response_rate: 85, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "2 ESXi hosts", ws_deployed: 8, ws_licenses_required: "32 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,false,true,false] },
       { unit_id: "17", unit_name: "AU & DE", subsidiary: "Martin Braun", country: "Germany", questionnaire_status: "Complete", response_rate: 90, priority: "High", critical_points: "DRS enabled = Datacenter required; 9x WS 2012 EOS", missing_data: "", infrastructure_summary: "10 ESXi hosts (160 cores), 2 clusters with DRS", ws_deployed: 45, ws_licenses_required: "160 cores DC", sql_deployed: "Enterprise", sql_licenses_required: "Enterprise", rds_deployed: 3, rds_licenses_required: "300 CALs", steps: [true,true,true,true,true,true,true,true,false] },
-      { unit_id: "18", unit_name: "Henkell Freixenet Group", subsidiary: "Henkell Freixenet", country: "Germany (HQ)", questionnaire_status: "Pending", response_rate: 60, priority: "High", critical_points: "vMotion/DRS status unknown; WS 2008-2022 deployed (EOS risk); IT outsourced to OEDIV", missing_data: "Host cores; vMotion/DRS config; SQL editions; RDS user count", infrastructure_summary: "14 ESXi (VMware 8) + Hyper-V, 107 VMs, 20 physical, 5 SQL, 22 locations, 2,200 users", ws_deployed: 127, ws_licenses_required: "TBD", sql_deployed: 5, sql_licenses_required: "TBD", rds_deployed: "Yes", rds_licenses_required: "TBD", steps: [true,true,true,true,false,false,false,false,false] },
+      { unit_id: "18", unit_name: "Henkell Freixenet Group", subsidiary: "Henkell Freixenet", country: "Germany (HQ)", questionnaire_status: "Pending", response_rate: 85, priority: "Critical", critical_points: "⚠️ 56 EOS VMs (WS2003/2008/2012); vMotion active = Datacenter required; GAP -54 cores DC", missing_data: "SQL editions; RDS user count", infrastructure_summary: "6 ESXi (DE:96c + ES:48c = 144 cores), 128 WS VMs (106 on), vMotion active, 2 clusters", ws_deployed: 128, ws_licenses_required: "144 cores DC", sql_deployed: 5, sql_licenses_required: "TBD", rds_deployed: "Yes", rds_licenses_required: "TBD", steps: [true,true,true,true,true,true,false,false,false] },
       { unit_id: "19", unit_name: "OE. Hotels Group", subsidiary: "OE. Hotels", country: "Global", questionnaire_status: "Complete", response_rate: 100, priority: "Low", critical_points: "", missing_data: "", infrastructure_summary: "No Microsoft Server Software used", ws_deployed: 0, ws_licenses_required: "N/A", sql_deployed: 0, sql_licenses_required: "N/A", rds_deployed: 0, rds_licenses_required: "N/A", steps: [true,true,true,true,true,true,true,true,true] },
     ];
 
@@ -1052,88 +1052,34 @@
     }
 
     async function fetchGoogleSheetsData() {
-      const { API_KEY, SPREADSHEET_ID, SHEET_NAME } = CONFIG.GOOGLE_SHEETS;
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch');
-      const data = await response.json();
-      const rows = data.values;
-      if (!rows || rows.length < 2) return [];
-      const headers = rows[0];
-      return rows.slice(1).map(row => {
-        const obj = {};
-        headers.forEach((h, i) => {
-          const key = h.toLowerCase().replace(/\s+/g, '_');
-          let val = row[i] || '';
-          if (['response_rate','ws_deployed','sql_deployed','rds_deployed'].includes(key)) val = val === '' ? '' : parseInt(val) || 0;
-          if (key === 'steps') val = val.split(',').map(v => v.trim().toLowerCase() === 'true');
-          obj[key] = val;
-        });
-        if (!obj.steps || !Array.isArray(obj.steps)) obj.steps = Array(9).fill(false);
-        if (!obj.subsidiary) obj.subsidiary = 'Martin Braun';
-        return obj;
-      });
-    }
-
-    async function fetchEntitlementsData() {
       try {
-        const { API_KEY, SPREADSHEET_ID, ENTITLEMENTS_SHEET } = CONFIG.GOOGLE_SHEETS;
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${ENTITLEMENTS_SHEET}?key=${API_KEY}`;
+        const { API_KEY, SPREADSHEET_ID, SHEET_NAME } = CONFIG.GOOGLE_SHEETS;
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
         const response = await fetch(url);
-        if (!response.ok) return null;
+        if (!response.ok) {
+          console.warn('Google Sheets Data fetch failed:', response.status);
+          return [];
+        }
         const data = await response.json();
         const rows = data.values;
-        if (!rows || rows.length < 2) return null;
-        const entitlements = {};
-        rows.slice(1).forEach(row => {
-          const subsidiary = row[0];
-          if (subsidiary) {
-            entitlements[subsidiary] = {
-              ws_datacenter: parseInt(row[1]) || 0,
-              ws_standard: parseInt(row[2]) || 0,
-              sql_enterprise: parseInt(row[3]) || 0,
-              sql_standard: parseInt(row[4]) || 0,
-              rds_cals: parseInt(row[5]) || 0,
-              hasData: true
-            };
-          }
+        if (!rows || rows.length < 2) return [];
+        const headers = rows[0];
+        return rows.slice(1).map(row => {
+          const obj = {};
+          headers.forEach((h, i) => {
+            const key = h.toLowerCase().replace(/\s+/g, '_');
+            let val = row[i] || '';
+            if (['response_rate','ws_deployed','sql_deployed','rds_deployed'].includes(key)) val = val === '' ? '' : parseInt(val) || 0;
+            if (key === 'steps') val = val.split(',').map(v => v.trim().toLowerCase() === 'true');
+            obj[key] = val;
+          });
+          if (!obj.steps || !Array.isArray(obj.steps)) obj.steps = Array(9).fill(false);
+          if (!obj.subsidiary) obj.subsidiary = 'Martin Braun';
+          return obj;
         });
-        return Object.keys(entitlements).length > 0 ? entitlements : null;
       } catch (e) {
-        console.error('Entitlements fetch failed:', e);
-        return null;
-      }
-    }
-
-    async function fetchRequirementsData() {
-      try {
-        const { API_KEY, SPREADSHEET_ID, REQUIREMENTS_SHEET } = CONFIG.GOOGLE_SHEETS;
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${REQUIREMENTS_SHEET}?key=${API_KEY}`;
-        const response = await fetch(url);
-        if (!response.ok) return null;
-        const data = await response.json();
-        const rows = data.values;
-        if (!rows || rows.length < 2) return null;
-        const requirements = {};
-        rows.slice(1).forEach(row => {
-          const subsidiary = row[0];
-          if (subsidiary) {
-            requirements[subsidiary] = {
-              ws_datacenter: parseInt(row[1]) || 0,
-              ws_standard: parseInt(row[2]) || 0,
-              sql_enterprise: parseInt(row[3]) || 0,
-              sql_standard: parseInt(row[4]) || 0,
-              rds_cals: parseInt(row[5]) || 0,
-              ws_deployed: parseInt(row[6]) || 0,
-              sql_deployed: parseInt(row[7]) || 0,
-              rds_deployed: parseInt(row[8]) || 0
-            };
-          }
-        });
-        return Object.keys(requirements).length > 0 ? requirements : null;
-      } catch (e) {
-        console.error('Requirements fetch failed:', e);
-        return null;
+        console.error('Google Sheets Data error:', e);
+        return [];
       }
     }
 
@@ -1491,7 +1437,6 @@
 
     function App() {
       const [data, setData] = React.useState(DEFAULT_DATA);
-      const [licenseEntitlements, setLicenseEntitlements] = React.useState(DEFAULT_ENTITLEMENTS);
       const [loading, setLoading] = React.useState(false);
       const [lastUpdate, setLastUpdate] = React.useState(new Date());
       const [activeTab, setActiveTab] = React.useState("all");
@@ -1500,7 +1445,6 @@
       const [subsidiaryFilter, setSubsidiaryFilter] = React.useState("all");
       const [showEOS, setShowEOS] = React.useState(false);
       const [showEntitlements, setShowEntitlements] = React.useState(false);
-      const [licenseRequirements, setLicenseRequirements] = React.useState(DEFAULT_REQUIREMENTS);
 
       React.useEffect(() => {
         if (!CONFIG.GOOGLE_SHEETS.ENABLED) return;
@@ -1508,13 +1452,9 @@
           setLoading(true);
           try { 
             const d = await fetchGoogleSheetsData(); 
-            if (d.length) setData(d); 
-            const ent = await fetchEntitlementsData();
-            if (ent) setLicenseEntitlements(ent);
-            const req = await fetchRequirementsData();
-            if (req) setLicenseRequirements(req);
-            setLastUpdate(new Date()); 
-          } catch(e) { console.error(e); }
+            if (d && d.length) setData(d); 
+          } catch(e) { console.error('Data fetch failed:', e); }
+          setLastUpdate(new Date());
           setLoading(false);
         };
         load();
@@ -1543,7 +1483,7 @@
       const getAggregatedLicenses = () => {
         if (subsidiaryFilter === "all") {
           // Sum only subsidiaries with deployment data (hasData: true)
-          const analyzedSubs = Object.entries(licenseEntitlements).filter(([_, s]) => s.hasData);
+          const analyzedSubs = Object.entries(LICENSE_ENTITLEMENTS).filter(([_, s]) => s.hasData);
           const entitled = {
             ws_standard: analyzedSubs.reduce((sum, [_, s]) => sum + s.ws_standard, 0),
             ws_datacenter: analyzedSubs.reduce((sum, [_, s]) => sum + s.ws_datacenter, 0),
@@ -1552,20 +1492,20 @@
             rds_cals: analyzedSubs.reduce((sum, [_, s]) => sum + s.rds_cals, 0),
           };
           const required = {
-            ws_standard: Object.values(licenseRequirements).reduce((sum, s) => sum + s.ws_standard, 0),
-            ws_datacenter: Object.values(licenseRequirements).reduce((sum, s) => sum + s.ws_datacenter, 0),
-            sql_standard: Object.values(licenseRequirements).reduce((sum, s) => sum + s.sql_standard, 0),
-            sql_enterprise: Object.values(licenseRequirements).reduce((sum, s) => sum + s.sql_enterprise, 0),
-            rds_cals: Object.values(licenseRequirements).reduce((sum, s) => sum + s.rds_cals, 0),
-            ws_deployed: Object.values(licenseRequirements).reduce((sum, s) => sum + s.ws_deployed, 0),
-            sql_deployed: Object.values(licenseRequirements).reduce((sum, s) => sum + s.sql_deployed, 0),
-            rds_deployed: Object.values(licenseRequirements).reduce((sum, s) => sum + s.rds_deployed, 0),
+            ws_standard: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.ws_standard, 0),
+            ws_datacenter: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.ws_datacenter, 0),
+            sql_standard: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.sql_standard, 0),
+            sql_enterprise: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.sql_enterprise, 0),
+            rds_cals: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.rds_cals, 0),
+            ws_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.ws_deployed, 0),
+            sql_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.sql_deployed, 0),
+            rds_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.rds_deployed, 0),
           };
           const hasData = analyzedSubs.length > 0;
           return { entitled, required, hasData };
         } else {
-          const entitled = licenseEntitlements[subsidiaryFilter] || {};
-          const required = licenseRequirements[subsidiaryFilter] || {};
+          const entitled = LICENSE_ENTITLEMENTS[subsidiaryFilter] || {};
+          const required = LICENSE_REQUIREMENTS[subsidiaryFilter] || {};
           const hasData = entitled.hasData || false;
           return { entitled, required, hasData };
         }
@@ -1616,7 +1556,7 @@
                   <select value={subsidiaryFilter} onChange={e => setSubsidiaryFilter(e.target.value)}>
                     <option value="all">All Subsidiaries</option>
                     {subsidiaries.map(s => (
-                      <option key={s} value={s}>{s} {!licenseEntitlements[s]?.hasData ? '(No data)' : ''}</option>
+                      <option key={s} value={s}>{s} {!LICENSE_ENTITLEMENTS[s]?.hasData ? '(No data)' : ''}</option>
                     ))}
                   </select>
                 </div>
@@ -1728,7 +1668,7 @@
             <div className="eos-badge" onClick={() => setShowEOS(true)}>
               <span className="eos-badge-icon">⚠️</span>
               <span className="eos-badge-text">End of Support</span>
-              <span className="eos-badge-count">14</span>
+              <span className="eos-badge-count">70</span>
             </div>
           </div>
 
@@ -1802,22 +1742,29 @@
                   </div>
                   <button className="eos-modal-close" onClick={() => setShowEOS(false)}>×</button>
                 </div>
-                <div className="eos-modal-value">14</div>
+                <div className="eos-modal-value">70</div>
                 <div className="eos-modal-label">VMs running unsupported Windows versions</div>
                 <div className="eos-modal-breakdown">
                   <div className="eos-modal-item">
                     <div className="eos-modal-item-left">
                       <div className="eos-modal-dot critical"></div>
+                      <span className="eos-modal-item-label">Windows Server 2003</span>
+                    </div>
+                    <span className="eos-modal-item-count">21</span>
+                  </div>
+                  <div className="eos-modal-item">
+                    <div className="eos-modal-item-left">
+                      <div className="eos-modal-dot critical"></div>
                       <span className="eos-modal-item-label">Windows Server 2008 R2</span>
                     </div>
-                    <span className="eos-modal-item-count">2</span>
+                    <span className="eos-modal-item-count">22</span>
                   </div>
                   <div className="eos-modal-item">
                     <div className="eos-modal-item-left">
                       <div className="eos-modal-dot high"></div>
                       <span className="eos-modal-item-label">Windows Server 2012</span>
                     </div>
-                    <span className="eos-modal-item-count">3</span>
+                    <span className="eos-modal-item-count">18</span>
                   </div>
                   <div className="eos-modal-item">
                     <div className="eos-modal-item-left">
@@ -1828,7 +1775,7 @@
                   </div>
                 </div>
                 <div className="eos-modal-affected">
-                  <strong>Affected BUs:</strong> MBI-Zerouno, Polen Food, AU & DE
+                  <strong>Affected BUs:</strong> MBI-Zerouno, Polen Food, AU & DE, Henkell Freixenet (56 VMs)
                 </div>
               </div>
             </div>
@@ -1836,7 +1783,7 @@
 
           {showEntitlements && (
             <div className="modal-overlay" onClick={() => setShowEntitlements(false)}>
-              <div className="entitlements-modal" onClick={e => e.stopPropagation()}>
+              <div className="entitlements-modal" onClick={e => e.stopPropagation()} style={{maxWidth: '900px'}}>
                 <div className="eos-modal-header">
                   <div className="eos-modal-title">
                     <span>📜</span>
@@ -1844,6 +1791,8 @@
                   </div>
                   <button className="eos-modal-close" onClick={() => setShowEntitlements(false)}>×</button>
                 </div>
+                
+                <div style={{fontSize: '0.75rem', color: '#E87A2A', fontWeight: '600', marginBottom: '8px', marginTop: '10px'}}>CORE LICENSES (EA + MPSA)</div>
                 <div className="entitlements-table-wrapper">
                   <table className="entitlements-table">
                     <thead>
@@ -1853,11 +1802,11 @@
                         <th>WS Std</th>
                         <th>SQL Ent</th>
                         <th>SQL Std</th>
-                        <th>RDS</th>
+                        <th>RDS User</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(licenseEntitlements).map(([name, ent]) => (
+                      {Object.entries(LICENSE_ENTITLEMENTS).map(([name, ent]) => (
                         <tr key={name}>
                           <td className="sub-name">{name}</td>
                           <td>{ent.ws_datacenter.toLocaleString()}</td>
@@ -1871,17 +1820,78 @@
                     <tfoot>
                       <tr>
                         <td className="sub-name">TOTAL</td>
-                        <td>{Object.values(licenseEntitlements).reduce((s,e) => s + e.ws_datacenter, 0).toLocaleString()}</td>
-                        <td>{Object.values(licenseEntitlements).reduce((s,e) => s + e.ws_standard, 0).toLocaleString()}</td>
-                        <td>{Object.values(licenseEntitlements).reduce((s,e) => s + e.sql_enterprise, 0).toLocaleString()}</td>
-                        <td>{Object.values(licenseEntitlements).reduce((s,e) => s + e.sql_standard, 0).toLocaleString()}</td>
-                        <td>{Object.values(licenseEntitlements).reduce((s,e) => s + e.rds_cals, 0).toLocaleString()}</td>
+                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.ws_datacenter, 0).toLocaleString()}</td>
+                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.ws_standard, 0).toLocaleString()}</td>
+                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.sql_enterprise, 0).toLocaleString()}</td>
+                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.sql_standard, 0).toLocaleString()}</td>
+                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.rds_cals, 0).toLocaleString()}</td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
+                
+                <div style={{fontSize: '0.75rem', color: '#E87A2A', fontWeight: '600', marginBottom: '8px', marginTop: '15px'}}>ADDITIONAL LICENSES (MPSA)</div>
+                <div className="entitlements-table-wrapper">
+                  <table className="entitlements-table">
+                    <thead>
+                      <tr>
+                        <th>Subsidiary</th>
+                        <th>RDS Device</th>
+                        <th>WS CAL</th>
+                        <th>SQL CAL</th>
+                        <th>Exchange</th>
+                        <th>SharePoint</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="sub-name">Budenheim</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>2 Srv</td>
+                      </tr>
+                      <tr>
+                        <td className="sub-name">Martin Braun</td>
+                        <td>10</td>
+                        <td>60</td>
+                        <td>2</td>
+                        <td>1 Srv + 60 CAL</td>
+                        <td>0</td>
+                      </tr>
+                      <tr>
+                        <td className="sub-name">Henkell Freixenet</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                      </tr>
+                      <tr>
+                        <td className="sub-name">OE. Hotels</td>
+                        <td>3</td>
+                        <td>0</td>
+                        <td>10</td>
+                        <td>0</td>
+                        <td>0</td>
+                      </tr>
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td className="sub-name">TOTAL</td>
+                        <td>13</td>
+                        <td>60</td>
+                        <td>12</td>
+                        <td>1 Srv + 60 CAL</td>
+                        <td>2 Srv</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                
                 <div className="entitlements-note">
-                  * Values based on contract/purchase records
+                  * EA = Enterprise Agreement (Core licenses) | MPSA = Microsoft Products and Services Agreement (CALs, Server licenses)
                 </div>
               </div>
             </div>
