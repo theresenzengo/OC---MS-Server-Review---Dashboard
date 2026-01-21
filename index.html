@@ -955,7 +955,7 @@
       { unit_id: "14", unit_name: "BE (Dakri)", subsidiary: "Martin Braun", country: "Poland", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "4 ESXi hosts, DRS enabled", ws_deployed: 12, ws_licenses_required: "64 cores DC", sql_deployed: 1, sql_licenses_required: "8 cores Std", rds_deployed: 1, rds_licenses_required: "10 CALs", steps: [true,true,true,true,true,true,true,true,false] },
       { unit_id: "15", unit_name: "Hoffs America", subsidiary: "Martin Braun", country: "USA", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "1 physical server", ws_deployed: 3, ws_licenses_required: "16 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: 1, rds_licenses_required: "25 CALs", steps: [true,true,true,true,true,true,false,true,false] },
       { unit_id: "16", unit_name: "CAP Fruit", subsidiary: "Martin Braun", country: "France", questionnaire_status: "Complete", response_rate: 85, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "2 ESXi hosts", ws_deployed: 8, ws_licenses_required: "32 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,false,true,false] },
-      { unit_id: "17", unit_name: "AU & DE", subsidiary: "Martin Braun", country: "Germany", questionnaire_status: "Complete", response_rate: 90, priority: "High", critical_points: "DRS enabled = Datacenter required; 9x WS 2012 EOS", missing_data: "", infrastructure_summary: "10 ESXi hosts (160 cores), 2 clusters with DRS", ws_deployed: 45, ws_licenses_required: "160 cores DC", sql_deployed: "Enterprise", sql_licenses_required: "Enterprise", rds_deployed: 3, rds_licenses_required: "300 CALs", steps: [true,true,true,true,true,true,true,true,false] },
+      { unit_id: "17", unit_name: "DE (MBI-MBIKG)", subsidiary: "Martin Braun", country: "Germany", questionnaire_status: "Complete", response_rate: 90, priority: "High", critical_points: "DRS enabled = Datacenter required; 9x WS 2012 EOS; 💰 Exchange Server + 60 CALs not required (Hybrid-only)", missing_data: "", infrastructure_summary: "10 ESXi hosts (160 cores), 2 clusters with DRS", ws_deployed: 45, ws_licenses_required: "160 cores DC", sql_deployed: "Enterprise", sql_licenses_required: "Enterprise", rds_deployed: 3, rds_licenses_required: "300 CALs", steps: [true,true,true,true,true,true,true,true,false] },
       { unit_id: "18", unit_name: "Henkell Freixenet Group", subsidiary: "Henkell Freixenet", country: "Germany (HQ)", questionnaire_status: "Pending", response_rate: 85, priority: "Critical", critical_points: "⚠️ 56 EOS VMs (WS2003/2008/2012); vMotion active = Datacenter required; GAP -54 cores DC", missing_data: "SQL editions; RDS user count", infrastructure_summary: "6 ESXi (DE:96c + ES:48c = 144 cores), 128 WS VMs (106 on), vMotion active, 2 clusters", ws_deployed: 128, ws_licenses_required: "144 cores DC", sql_deployed: 5, sql_licenses_required: "TBD", rds_deployed: "Yes", rds_licenses_required: "TBD", steps: [true,true,true,true,true,true,false,false,false] },
       { unit_id: "19", unit_name: "OE. Hotels Group", subsidiary: "OE. Hotels", country: "Global", questionnaire_status: "Complete", response_rate: 100, priority: "Low", critical_points: "", missing_data: "", infrastructure_summary: "No Microsoft Server Software used", ws_deployed: 0, ws_licenses_required: "N/A", sql_deployed: 0, sql_licenses_required: "N/A", rds_deployed: 0, rds_licenses_required: "N/A", steps: [true,true,true,true,true,true,true,true,true] },
     ];
@@ -1379,7 +1379,7 @@
       doc.setFont('helvetica', 'normal');
       addText('   - 14 VMs running unsupported Windows versions');
       addText('   - WS 2008 R2: 2 VMs, WS 2012: 3 VMs, WS 2012 R2: 9 VMs');
-      addText('   - Affected: MBI-Zerouno, Polen Food, AU & DE');
+      addText('   - Affected: MBI-Zerouno, Polen Food, DE (MBI-MBIKG)');
       addText('   - Timeline: 90 days');
       y += 3;
       
@@ -1775,7 +1775,7 @@
                   </div>
                 </div>
                 <div className="eos-modal-affected">
-                  <strong>Affected BUs:</strong> MBI-Zerouno, Polen Food, AU & DE, Henkell Freixenet (56 VMs)
+                  <strong>Affected BUs:</strong> MBI-Zerouno, Polen Food, DE (MBI-MBIKG), Henkell Freixenet (56 VMs)
                 </div>
               </div>
             </div>
