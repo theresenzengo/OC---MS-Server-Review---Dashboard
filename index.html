@@ -75,6 +75,15 @@
     .logo-img { height: 40px; width: auto; }
     .logo-text h1 { font-size: 1.4rem; font-weight: 700; color: var(--text-light); }
     .logo-text span { font-size: 0.85rem; color: rgba(255,255,255,0.7); }
+    .data-source-badge { 
+      font-size: 0.65rem; 
+      color: #fbbf24; 
+      background: rgba(251, 191, 36, 0.15); 
+      border: 1px solid rgba(251, 191, 36, 0.3); 
+      padding: 0.2rem 0.5rem; 
+      border-radius: 4px; 
+      margin-left: 0.5rem;
+    }
     .header-right { display: flex; align-items: center; gap: 1.5rem; }
     .section-header-spacer { flex: 1; }
     .export-btn {
@@ -94,16 +103,6 @@
     .export-btn:hover {
       background: rgba(232, 122, 42, 0.1);
       border-color: #E87A2A;
-    }
-    .export-btn.disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      border-color: rgba(150, 150, 150, 0.3);
-      color: #999;
-    }
-    .export-btn.disabled:hover {
-      background: transparent;
-      border-color: rgba(150, 150, 150, 0.3);
     }
     .last-update { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: rgba(255,255,255,0.6); }
     .loading-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--accent-orange); margin-top: 0.25rem; }
@@ -855,112 +854,117 @@
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const CONFIG = { GOOGLE_SHEETS: { ENABLED: true, API_KEY: 'AIzaSyD7F4sjl8DUYvfLBOq5N5cXm-AThaDnGdY', SPREADSHEET_ID: '1RldtkHxCkFH9iDVNxEuAW_C1bWSzOlNOv_e5aPjvBFc', SHEET_NAME: 'Data' }, AUTO_REFRESH_MINUTES: 5 };
+    const CONFIG = {
+      GOOGLE_SHEETS: {
+        ENABLED: true,
+        API_KEY: 'AIzaSyD7F4sjl8DUYvfLBOq5N5cXm-AThaDnGdY',
+        SPREADSHEET_ID: '1RldtkHxCkFH9iDVNxEuAW_C1bWSzOlNOv_e5aPjvBFc',
+        SHEETS: { DATA: 'Data', ENTITLEMENTS: 'Entitlements', REQUIREMENTS: 'Requirements' }
+      },
+      AUTO_REFRESH_MINUTES: 5
+    };
+
     const WORKFLOW_STEPS = ["Questionnaire sent", "Questionnaire received", "Initial analysis", "Follow-up sent", "Additional data received", "RVTools received", "SQL scripts received", "Final analysis", "Report delivered"];
-    
-    // License Entitlements by Subsidiary (from OC_Licences.xlsx - updated)
-    const LICENSE_ENTITLEMENTS = {
-      "Budenheim": {
-        ws_standard: 364,
-        ws_datacenter: 30,
-        sql_standard: 16,
-        sql_enterprise: 32,
-        rds_cals: 100,
-        hasData: true
-      },
-      "Martin Braun": {
-        ws_standard: 184,
-        ws_datacenter: 172,
-        sql_standard: 9,
-        sql_enterprise: 0,
-        rds_cals: 35,
-        hasData: true
-      },
-      "Henkell Freixenet": {
-        ws_standard: 968,
-        ws_datacenter: 90,
-        sql_standard: 14,
-        sql_enterprise: 0,
-        rds_cals: 62,
-        hasData: true // Partial data - pending full analysis
-      },
-      "OE. Hotels": {
-        ws_standard: 160,
-        ws_datacenter: 0,
-        sql_standard: 49,
-        sql_enterprise: 0,
-        rds_cals: 3,
-        hasData: true // Confirmed: No MS Server deployed, but has license entitlements
-      }
-    };
-    
-    // License Requirements (deployed) by Subsidiary
-    const LICENSE_REQUIREMENTS = {
-      "Budenheim": {
-        ws_standard: 248,
-        ws_datacenter: 128,
-        sql_standard: 16,
-        sql_enterprise: 16,
-        rds_cals: 70,
-        ws_deployed: 138,
-        sql_deployed: 4,
-        rds_deployed: 4
-      },
-      "Martin Braun": {
-        ws_standard: 96,
-        ws_datacenter: 292,
-        sql_standard: 32,
-        sql_enterprise: 34,
-        rds_cals: 1099,
-        ws_deployed: 196,
-        sql_deployed: 27,
-        rds_deployed: 9
-      },
-      "Henkell Freixenet": {
-        ws_standard: 0,
-        ws_datacenter: 144,
-        sql_standard: 0,
-        sql_enterprise: 0,
-        rds_cals: 0,
-        ws_deployed: 128,
-        sql_deployed: 5,
-        rds_deployed: 0
-      },
-      "OE. Hotels": {
-        ws_standard: 0,
-        ws_datacenter: 0,
-        sql_standard: 0,
-        sql_enterprise: 0,
-        rds_cals: 0,
-        ws_deployed: 0,
-        sql_deployed: 0,
-        rds_deployed: 0
-      }
-    };
 
-    const DEFAULT_DATA = [
-      { unit_id: "1", unit_name: "Agrano KG", subsidiary: "Martin Braun", country: "Germany", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "4 ESXi hosts, 8 VMs, vMotion enabled", ws_deployed: 8, ws_licenses_required: "72 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,false,true,false] },
-      { unit_id: "2", unit_name: "Diversi Foods", subsidiary: "Martin Braun", country: "Belgium", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "2 ESXi, vMotion enabled", ws_deployed: 6, ws_licenses_required: "32 cores DC", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,false,true,false] },
-      { unit_id: "3", unit_name: "MBI-Zerouno", subsidiary: "Martin Braun", country: "Italy", questionnaire_status: "Complete", response_rate: 95, priority: "Medium", critical_points: "1x WS 2012 R2 EOS", missing_data: "", infrastructure_summary: "2 ESXi hosts, 10 VMs", ws_deployed: 10, ws_licenses_required: "32 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,true,true,false] },
-      { unit_id: "4", unit_name: "MBES", subsidiary: "Martin Braun", country: "Spain", questionnaire_status: "Pending", response_rate: 85, priority: "High", critical_points: "OEM + vMotion conflict", missing_data: "License type clarification", infrastructure_summary: "2 Hyper-V hosts, vMotion", ws_deployed: 5, ws_licenses_required: "24 cores Std", sql_deployed: "4x Express", sql_licenses_required: "Free", rds_deployed: 1, rds_licenses_required: "15 CALs", steps: [true,true,true,true,true,false,false,false,false] },
-      { unit_id: "5", unit_name: "WBB", subsidiary: "Martin Braun", country: "Germany", questionnaire_status: "Pending", response_rate: 75, priority: "Critical", critical_points: "SQL Enterprise + vMotion/DRS = Datacenter required", missing_data: "RVTools; Host cores; SQL details", infrastructure_summary: "3 ESXi + Proxmox, 88 VMs, DRS enabled", ws_deployed: 61, ws_licenses_required: "TBD (Datacenter)", sql_deployed: "2 Ent + 3 VMs", sql_licenses_required: "Enterprise TBD", rds_deployed: 1, rds_licenses_required: "195 CALs", steps: [true,true,true,true,false,false,false,false,false] },
-      { unit_id: "6", unit_name: "Budenheim", subsidiary: "Budenheim", country: "Germany", questionnaire_status: "Complete", response_rate: 95, priority: "High", critical_points: "SQL Enterprise Always On; DRS on Germany cluster", missing_data: "License proofs", infrastructure_summary: "17 ESXi (376 cores), 138 VMs, 7 countries, DRS on DEBUDVMCL1", ws_deployed: 138, ws_licenses_required: "128c DC + 248c Std", sql_deployed: "2 Ent + 2 Std", sql_licenses_required: "16c Ent + 16c Std", rds_deployed: 4, rds_licenses_required: "70 CALs", steps: [true,true,true,true,true,true,true,true,false] },
-      { unit_id: "7", unit_name: "Agrano AG", subsidiary: "Martin Braun", country: "Switzerland", questionnaire_status: "Complete", response_rate: 85, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "2 ESXi hosts", ws_deployed: 6, ws_licenses_required: "32 cores Std", sql_deployed: 1, sql_licenses_required: "8 cores Std", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,false,true,false] },
-      { unit_id: "8", unit_name: "Polen Food", subsidiary: "Martin Braun", country: "Turkey", questionnaire_status: "Complete", response_rate: 90, priority: "High", critical_points: "4x EOS VMs (WS2008R2, WS2012); SQL CALs gap", missing_data: "SQL CAL count", infrastructure_summary: "4 ESXi (68 cores), 18 VMs, 3 sites, HA enabled", ws_deployed: 17, ws_licenses_required: "64 cores Std", sql_deployed: "1 Std + 2 Exp", sql_licenses_required: "4c Std + 60-70 CALs", rds_deployed: 2, rds_licenses_required: "54 CALs", steps: [true,true,true,true,true,true,true,true,false] },
-      { unit_id: "9", unit_name: "Montana GB", subsidiary: "Martin Braun", country: "United Kingdom", questionnaire_status: "Complete", response_rate: 95, priority: "Critical", critical_points: "⚠️ SQL 2019 ENTERPRISE undeclared (10 cores)", missing_data: "SQL Enterprise license verification", infrastructure_summary: "4 ESXi hosts, 13 VMs, 2 sites", ws_deployed: 11, ws_licenses_required: "64 cores Std", sql_deployed: "1 Std + 1 Ent", sql_licenses_required: "8c Std + 10c Ent ⚠️", rds_deployed: 1, rds_licenses_required: "500 CALs", steps: [true,true,true,true,true,true,true,true,false] },
-      { unit_id: "10", unit_name: "MBPL", subsidiary: "Martin Braun", country: "Poland", questionnaire_status: "Complete", response_rate: 95, priority: "Low", critical_points: "", missing_data: "SQL license proof", infrastructure_summary: "2 Hyper-V hosts (20 cores), 6 VMs, no HA", ws_deployed: 5, ws_licenses_required: "32 cores Std", sql_deployed: "1 Std", sql_licenses_required: "4 cores Std", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,true,true,false] },
-      { unit_id: "11", unit_name: "MBN", subsidiary: "Martin Braun", country: "Netherlands", questionnaire_status: "Pending", response_rate: 70, priority: "Medium", critical_points: "", missing_data: "Windows/SQL editions", infrastructure_summary: "1 physical + VMs", ws_deployed: 4, ws_licenses_required: "8 cores Std", sql_deployed: "TBD", sql_licenses_required: "TBD", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,false,false,false,false,false] },
-      { unit_id: "12", unit_name: "MBR", subsidiary: "Martin Braun", country: "-", questionnaire_status: "Out of Scope", response_rate: 0, priority: "", critical_points: "", missing_data: "", infrastructure_summary: "", ws_deployed: "", ws_licenses_required: "", sql_deployed: "", sql_licenses_required: "", rds_deployed: "", rds_licenses_required: "", steps: [false,false,false,false,false,false,false,false,false] },
-      { unit_id: "13", unit_name: "MBHU", subsidiary: "Martin Braun", country: "Hungary", questionnaire_status: "Pending", response_rate: 40, priority: "High", critical_points: "", missing_data: "Infrastructure details needed", infrastructure_summary: "TBD", ws_deployed: "", ws_licenses_required: "TBD", sql_deployed: "", sql_licenses_required: "TBD", rds_deployed: "", rds_licenses_required: "", steps: [true,true,false,true,false,false,false,false,false] },
-      { unit_id: "14", unit_name: "BE (Dakri)", subsidiary: "Martin Braun", country: "Poland", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "4 ESXi hosts, DRS enabled", ws_deployed: 12, ws_licenses_required: "64 cores DC", sql_deployed: 1, sql_licenses_required: "8 cores Std", rds_deployed: 1, rds_licenses_required: "10 CALs", steps: [true,true,true,true,true,true,true,true,false] },
-      { unit_id: "15", unit_name: "Hoffs America", subsidiary: "Martin Braun", country: "USA", questionnaire_status: "Complete", response_rate: 90, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "1 physical server", ws_deployed: 3, ws_licenses_required: "16 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: 1, rds_licenses_required: "25 CALs", steps: [true,true,true,true,true,true,false,true,false] },
-      { unit_id: "16", unit_name: "CAP Fruit", subsidiary: "Martin Braun", country: "France", questionnaire_status: "Complete", response_rate: 85, priority: "Medium", critical_points: "", missing_data: "", infrastructure_summary: "2 ESXi hosts", ws_deployed: 8, ws_licenses_required: "32 cores Std", sql_deployed: "Express", sql_licenses_required: "Free", rds_deployed: "", rds_licenses_required: "", steps: [true,true,true,true,true,true,false,true,false] },
-      { unit_id: "17", unit_name: "DE (MBI-MBIKG)", subsidiary: "Martin Braun", country: "Germany", questionnaire_status: "Complete", response_rate: 90, priority: "High", critical_points: "DRS enabled = Datacenter required; 9x WS 2012 EOS; 💰 Exchange Server + 60 CALs not required (Hybrid-only)", missing_data: "", infrastructure_summary: "10 ESXi hosts (160 cores), 2 clusters with DRS", ws_deployed: 45, ws_licenses_required: "160 cores DC", sql_deployed: "Enterprise", sql_licenses_required: "Enterprise", rds_deployed: 3, rds_licenses_required: "300 CALs", steps: [true,true,true,true,true,true,true,true,false] },
-      { unit_id: "18", unit_name: "Henkell Freixenet Group", subsidiary: "Henkell Freixenet", country: "Germany (HQ)", questionnaire_status: "Pending", response_rate: 85, priority: "Critical", critical_points: "⚠️ 56 EOS VMs (WS2003/2008/2012); vMotion active = Datacenter required; GAP -54 cores DC", missing_data: "SQL editions; RDS user count", infrastructure_summary: "6 ESXi (DE:96c + ES:48c = 144 cores), 128 WS VMs (106 on), vMotion active, 2 clusters", ws_deployed: 128, ws_licenses_required: "144 cores DC", sql_deployed: 5, sql_licenses_required: "TBD", rds_deployed: "Yes", rds_licenses_required: "TBD", steps: [true,true,true,true,true,true,false,false,false] },
-      { unit_id: "19", unit_name: "OE. Hotels Group", subsidiary: "OE. Hotels", country: "Global", questionnaire_status: "Complete", response_rate: 100, priority: "Low", critical_points: "", missing_data: "", infrastructure_summary: "No Microsoft Server Software used", ws_deployed: 0, ws_licenses_required: "N/A", sql_deployed: 0, sql_licenses_required: "N/A", rds_deployed: 0, rds_licenses_required: "N/A", steps: [true,true,true,true,true,true,true,true,true] },
-    ];
+    // ==========================================
+    // FETCH ALL SHEETS DYNAMICALLY
+    // ==========================================
+    async function fetchSheet(sheetName) {
+      const { API_KEY, SPREADSHEET_ID } = CONFIG.GOOGLE_SHEETS;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to fetch sheet: ${sheetName}`);
+      const data = await response.json();
+      const rows = data.values;
+      if (!rows || rows.length < 2) return [];
+      const headers = rows[0];
+      return rows.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((h, i) => {
+          obj[h.toLowerCase().replace(/\s+/g, '_')] = row[i] || '';
+        });
+        return obj;
+      });
+    }
 
-    // Compliance Bar Component with License Recommendation
+    function parseDataSheet(rows) {
+      return rows.map(row => {
+        const numFields = ['esxi_hosts','total_physical_cores','total_vms','windows_vms','sql_instances','users'];
+        numFields.forEach(f => { row[f] = row[f] === '' ? '' : parseInt(row[f]) || 0; });
+        if (typeof row.response_rate === 'string') row.response_rate = parseInt(row.response_rate) || 0;
+        if (typeof row.steps === 'string') row.steps = row.steps.split(',').map(v => v.trim().toLowerCase() === 'true');
+        if (!row.steps || !Array.isArray(row.steps)) row.steps = Array(9).fill(false);
+        if (!row.subsidiary) row.subsidiary = 'Martin Braun';
+        // Map new column names to legacy names for backward compatibility
+        row.ws_deployed = row.windows_vms !== undefined ? row.windows_vms : '';
+        row.sql_deployed = row.sql_instances !== undefined ? row.sql_instances : '';
+        row.rds_deployed = (row.rds_in_use || '').replace(/^No.*$/i, '').replace(/^N\/A$/i, '') || '';
+        row.infrastructure_summary = row.critical_notes || '';
+        row.ws_licenses_required = '';
+        row.sql_licenses_required = '';
+        row.rds_licenses_required = '';
+        row.critical_points = row.eos_risk || '';
+        row.missing_data = '';
+        return row;
+      });
+    }
+
+    function parseEntitlementsSheet(rows) {
+      const result = {};
+      rows.forEach(row => {
+        const name = row.subsidiary;
+        if (!name) return;
+        result[name] = {
+          ws_datacenter: parseInt(row.ws_datacenter) || 0,
+          ws_standard: parseInt(row.ws_standard) || 0,
+          sql_enterprise: parseInt(row.sql_enterprise) || 0,
+          sql_standard: parseInt(row.sql_standard) || 0,
+          rds_cals: parseInt(row.rds_cals) || 0,
+          hasData: true,
+          source: row.source || 'G3 License',
+          notes: row.notes || ''
+        };
+      });
+      return result;
+    }
+
+    function parseRequirementsSheet(rows) {
+      const result = {};
+      rows.forEach(row => {
+        const name = row.subsidiary;
+        if (!name) return;
+        result[name] = {
+          ws_datacenter: parseInt(row.ws_datacenter) || 0,
+          ws_standard: parseInt(row.ws_standard) || 0,
+          sql_enterprise: parseInt(row.sql_enterprise) || 0,
+          sql_standard: parseInt(row.sql_standard) || 0,
+          rds_cals: parseInt(row.rds_cals) || 0,
+          ws_deployed: parseInt(row.ws_deployed) || 0,
+          sql_deployed: parseInt(row.sql_deployed) || 0,
+          rds_deployed: parseInt(row.rds_deployed) || 0,
+          notes: row.notes || ''
+        };
+      });
+      return result;
+    }
+
+    async function fetchAllSheets() {
+      const { SHEETS } = CONFIG.GOOGLE_SHEETS;
+      const [dataRows, entRows, reqRows] = await Promise.all([
+        fetchSheet(SHEETS.DATA),
+        fetchSheet(SHEETS.ENTITLEMENTS),
+        fetchSheet(SHEETS.REQUIREMENTS)
+      ]);
+      return {
+        data: parseDataSheet(dataRows),
+        entitlements: parseEntitlementsSheet(entRows),
+        requirements: parseRequirementsSheet(reqRows)
+      };
+    }
+
+    // ==========================================
+    // COMPLIANCE BAR COMPONENT (unchanged)
+    // ==========================================
     function ComplianceBar({ label, metric, required, entitled, icon, sku }) {
       const percentage = entitled > 0 ? Math.round((required / entitled) * 100) : (required > 0 ? 999 : 0);
       const isCompliant = percentage <= 100;
@@ -969,11 +973,8 @@
       const gap = entitled - required;
       const fillWidth = Math.min(isOver ? 100 : percentage, 100);
       const deficit = gap < 0 ? Math.abs(gap) : 0;
-      
-      // Calculate packs needed (2-core packs for cores, 1:1 for CALs)
       const isCAL = metric.toLowerCase().includes('cal');
       const packsNeeded = isCAL ? deficit : Math.ceil(deficit / 2);
-      
       let statusClass = 'compliant';
       if (isOver) statusClass = 'over';
       else if (isWarning) statusClass = 'warning';
@@ -993,10 +994,7 @@
               </div>
             </div>
             <div className="compliance-bar-container">
-              <div 
-                className={`compliance-bar-fill ${statusClass}`}
-                style={{ width: `${fillWidth}%` }}
-              />
+              <div className={`compliance-bar-fill ${statusClass}`} style={{ width: `${fillWidth}%` }} />
               {entitled > 0 && <div className="compliance-bar-marker" style={{ left: `${Math.min(100, (entitled / Math.max(required, entitled)) * 100)}%` }}></div>}
             </div>
             <div className="compliance-bar-footer">
@@ -1008,20 +1006,13 @@
               </span>
             </div>
           </div>
-          
-          {/* License Recommendation Card */}
           {deficit > 0 && sku && (
             <div className="license-rec-card">
-              <div className="license-rec-header">
-                <span className="license-rec-icon">📦</span>
-                <span className="license-rec-title">Required</span>
-              </div>
+              <div className="license-rec-header"><span className="license-rec-icon">📦</span><span className="license-rec-title">Required</span></div>
               <div className="license-rec-value">{packsNeeded.toLocaleString()}</div>
               <div className="license-rec-sku">{sku}</div>
             </div>
           )}
-          
-          {/* Compliant badge - only if actually compliant (required > 0) */}
           {deficit === 0 && required > 0 && (
             <div className="license-rec-card compliant">
               <div className="license-rec-check">✓</div>
@@ -1030,8 +1021,6 @@
               {gap > 0 && <div className="license-rec-saving">(-{isCAL ? gap.toLocaleString() : Math.ceil(gap/2).toLocaleString()})</div>}
             </div>
           )}
-          
-          {/* Pending badge - when required is 0 but entitled > 0 (surplus/unused licenses) */}
           {deficit === 0 && required === 0 && entitled > 0 && (
             <div className="license-rec-card surplus">
               <div className="license-rec-check">💰</div>
@@ -1039,8 +1028,6 @@
               <div className="license-rec-surplus">+{entitled.toLocaleString()}</div>
             </div>
           )}
-          
-          {/* N/A badge - when both required and entitled are 0 */}
           {required === 0 && entitled === 0 && (
             <div className="license-rec-card na">
               <div className="license-rec-check">—</div>
@@ -1051,95 +1038,30 @@
       );
     }
 
-    async function fetchGoogleSheetsData() {
-      try {
-        const { API_KEY, SPREADSHEET_ID, SHEET_NAME } = CONFIG.GOOGLE_SHEETS;
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          console.warn('Google Sheets Data fetch failed:', response.status);
-          return [];
-        }
-        const data = await response.json();
-        const rows = data.values;
-        if (!rows || rows.length < 2) return [];
-        const headers = rows[0];
-        return rows.slice(1).map(row => {
-          const obj = {};
-          headers.forEach((h, i) => {
-            const key = h.toLowerCase().replace(/\s+/g, '_');
-            let val = row[i] || '';
-            if (['response_rate','ws_deployed','sql_deployed','rds_deployed'].includes(key)) val = val === '' ? '' : parseInt(val) || 0;
-            if (key === 'steps') val = val.split(',').map(v => v.trim().toLowerCase() === 'true');
-            obj[key] = val;
-          });
-          if (!obj.steps || !Array.isArray(obj.steps)) obj.steps = Array(9).fill(false);
-          if (!obj.subsidiary) obj.subsidiary = 'Martin Braun';
-          return obj;
-        });
-      } catch (e) {
-        console.error('Google Sheets Data error:', e);
-        return [];
-      }
-    }
-
-    // Generate PDF Report
+    // ==========================================
+    // PDF GENERATION (unchanged - uses passed-in data)
+    // ==========================================
     function generatePDF(data, entitled, required, kpis) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const margin = 20;
       let y = 20;
+      const addTitle = (text, size = 16) => { doc.setFontSize(size); doc.setFont('helvetica', 'bold'); doc.setTextColor(26, 26, 46); doc.text(text, margin, y); y += size * 0.5 + 5; };
+      const addText = (text, size = 10) => { doc.setFontSize(size); doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60); const lines = doc.splitTextToSize(text, pageWidth - 2 * margin); doc.text(lines, margin, y); y += lines.length * size * 0.4 + 3; };
+      const addLine = () => { doc.setDrawColor(200, 200, 200); doc.line(margin, y, pageWidth - margin, y); y += 5; };
+      const checkNewPage = (needed = 30) => { if (y > 270 - needed) { doc.addPage(); y = 20; } };
       
-      // Helper functions
-      const addTitle = (text, size = 16) => {
-        doc.setFontSize(size);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(26, 26, 46);
-        doc.text(text, margin, y);
-        y += size * 0.5 + 5;
-      };
-      
-      const addText = (text, size = 10) => {
-        doc.setFontSize(size);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(60, 60, 60);
-        const lines = doc.splitTextToSize(text, pageWidth - 2 * margin);
-        doc.text(lines, margin, y);
-        y += lines.length * size * 0.4 + 3;
-      };
-      
-      const addLine = () => {
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 5;
-      };
-      
-      const checkNewPage = (needed = 30) => {
-        if (y > 270 - needed) {
-          doc.addPage();
-          y = 20;
-        }
-      };
-      
-      // Page 1: Title
-      doc.setFillColor(26, 26, 46);
-      doc.rect(0, 0, pageWidth, 60, 'F');
-      doc.setFontSize(24);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(255, 255, 255);
+      // Title page
+      doc.setFillColor(26, 26, 46); doc.rect(0, 0, pageWidth, 60, 'F');
+      doc.setFontSize(24); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
       doc.text('Microsoft Server Licensing', margin, 30);
-      doc.setFontSize(16);
-      doc.text('Assessment Report - Oetker Collection', margin, 42);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(16); doc.text('Assessment Report - Oetker Collection', margin, 42);
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
       doc.text('Generated: ' + new Date().toLocaleDateString(), margin, 55);
-      
       y = 75;
       
-      // Executive Summary
-      addTitle('Executive Summary', 14);
-      addLine();
+      addTitle('Executive Summary', 14); addLine();
       addText(`Total Business Units Analyzed: ${kpis.total}`);
       addText(`Completed Assessments: ${kpis.complete} (${kpis.total > 0 ? Math.round(kpis.complete/kpis.total*100) : 0}%)`);
       addText(`Average Response Rate: ${kpis.avg}%`);
@@ -1147,10 +1069,7 @@
       addText(`Pending Actions: ${kpis.pending}`);
       y += 10;
       
-      // License Compliance Status - Visual Cards
-      addTitle('License Compliance Status', 14);
-      addLine();
-      
+      addTitle('License Compliance Status', 14); addLine();
       const products = [
         { name: 'Windows Server Datacenter', req: required.ws_datacenter || 0, ent: entitled.ws_datacenter || 0, unit: 'cores', icon: '🖥️' },
         { name: 'Windows Server Standard', req: required.ws_standard || 0, ent: entitled.ws_standard || 0, unit: 'cores', icon: '🖥️' },
@@ -1158,354 +1077,198 @@
         { name: 'SQL Server Standard', req: required.sql_standard || 0, ent: entitled.sql_standard || 0, unit: 'cores', icon: '🗄️' },
         { name: 'RDS User CALs', req: required.rds_cals || 0, ent: entitled.rds_cals || 0, unit: 'CALs', icon: '👥' }
       ];
-      
-      const cardHeight = 22;
-      const barWidth = 90;
-      const cardWidth = pageWidth - 2 * margin;
+      const cardHeight = 22; const barWidth = 90; const cardWidth = pageWidth - 2 * margin;
       
       products.forEach(p => {
         checkNewPage(cardHeight + 5);
-        const gap = p.ent - p.req;
-        const pct = p.ent > 0 ? Math.round((p.req / p.ent) * 100) : (p.req > 0 ? 999 : 0);
-        const isCompliant = gap >= 0;
-        const fillPct = Math.min(pct, 100) / 100;
-        
-        // Card background
-        doc.setFillColor(245, 247, 250);
-        doc.roundedRect(margin, y, cardWidth, cardHeight, 3, 3, 'F');
-        
-        // Product name
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(26, 26, 46);
+        const gap = p.ent - p.req; const pct = p.ent > 0 ? Math.round((p.req / p.ent) * 100) : (p.req > 0 ? 999 : 0);
+        const isCompliant = gap >= 0; const fillPct = Math.min(pct, 100) / 100;
+        doc.setFillColor(245, 247, 250); doc.roundedRect(margin, y, cardWidth, cardHeight, 3, 3, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(26, 26, 46);
         doc.text(p.name, margin + 5, y + 8);
-        
-        // Values (Required / Entitled)
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 100, 100);
         doc.text(`${p.req.toLocaleString()} / ${p.ent.toLocaleString()} ${p.unit}`, margin + 5, y + 16);
-        
-        // Progress bar background
-        const barX = margin + 95;
-        const barY = y + 7;
-        const barHeight = 10;
-        doc.setFillColor(220, 220, 225);
-        doc.roundedRect(barX, barY, barWidth, barHeight, 2, 2, 'F');
-        
-        // Progress bar fill
-        if (fillPct > 0) {
-          if (isCompliant) {
-            doc.setFillColor(16, 185, 129); // Green
-          } else {
-            doc.setFillColor(239, 68, 68); // Red
-          }
-          doc.roundedRect(barX, barY, barWidth * fillPct, barHeight, 2, 2, 'F');
-        }
-        
-        // Percentage badge
+        const barX = margin + 95; const barY = y + 7; const barHeight = 10;
+        doc.setFillColor(220, 220, 225); doc.roundedRect(barX, barY, barWidth, barHeight, 2, 2, 'F');
+        if (fillPct > 0) { doc.setFillColor(isCompliant ? 16 : 239, isCompliant ? 185 : 68, isCompliant ? 129 : 68); doc.roundedRect(barX, barY, barWidth * fillPct, barHeight, 2, 2, 'F'); }
         const badgeX = barX + barWidth + 5;
-        if (isCompliant) {
-          doc.setFillColor(220, 252, 231); // Light green
-          doc.setTextColor(22, 163, 74); // Green text
-        } else {
-          doc.setFillColor(254, 226, 226); // Light red
-          doc.setTextColor(220, 38, 38); // Red text
-        }
+        if (isCompliant) { doc.setFillColor(220, 252, 231); doc.setTextColor(22, 163, 74); } else { doc.setFillColor(254, 226, 226); doc.setTextColor(220, 38, 38); }
         doc.roundedRect(badgeX, barY, 25, barHeight, 2, 2, 'F');
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold');
         doc.text(`${pct > 999 ? '∞' : pct}%`, badgeX + 5, barY + 7);
-        
-        // Gap/Surplus indicator
-        const gapX = badgeX + 30;
-        doc.setFontSize(9);
-        if (isCompliant) {
-          doc.setTextColor(22, 163, 74);
-          doc.text(`+${gap.toLocaleString()}`, gapX, y + 14);
-        } else {
-          doc.setTextColor(220, 38, 38);
-          doc.text(`${gap.toLocaleString()}`, gapX, y + 14);
-        }
-        
+        const gapX = badgeX + 30; doc.setFontSize(9);
+        if (isCompliant) { doc.setTextColor(22, 163, 74); doc.text(`+${gap.toLocaleString()}`, gapX, y + 14); }
+        else { doc.setTextColor(220, 38, 38); doc.text(`${gap.toLocaleString()}`, gapX, y + 14); }
         y += cardHeight + 4;
       });
       y += 6;
       
-      // Purchase Recommendations - Visual Cards
-      checkNewPage(80);
-      addTitle('Purchase Recommendations', 14);
-      addLine();
-      
-      let hasPurchase = false;
-      const purchaseItems = [];
-      products.forEach(p => {
-        const gap = p.ent - p.req;
-        if (gap < 0) {
-          hasPurchase = true;
-          const deficit = Math.abs(gap);
-          const packs = p.unit === 'CALs' ? deficit : Math.ceil(deficit / 2);
-          const sku = p.unit === 'CALs' ? 'RDS User CAL LIC+SA' : p.name.replace('Windows Server ', 'WS ').replace('SQL Server ', 'SQL ') + ' 2-Core LIC+SA';
-          purchaseItems.push({ packs, sku, deficit, unit: p.unit });
-        }
-      });
+      // Purchase Recommendations
+      checkNewPage(80); addTitle('Purchase Recommendations', 14); addLine();
+      let hasPurchase = false; const purchaseItems = [];
+      products.forEach(p => { const gap = p.ent - p.req; if (gap < 0) { hasPurchase = true; const deficit = Math.abs(gap); const packs = p.unit === 'CALs' ? deficit : Math.ceil(deficit / 2); const sku = p.unit === 'CALs' ? 'RDS User CAL LIC+SA' : p.name.replace('Windows Server ', 'WS ').replace('SQL Server ', 'SQL ') + ' 2-Core LIC+SA'; purchaseItems.push({ packs, sku, deficit, unit: p.unit }); } });
       
       if (hasPurchase) {
-        const recCardWidth = (pageWidth - 2 * margin - 10) / 2;
-        const recCardHeight = 35;
-        let recX = margin;
-        let recRow = 0;
-        
+        const recCardWidth = (pageWidth - 2 * margin - 10) / 2; const recCardHeight = 35; let recX = margin;
         purchaseItems.forEach((item, idx) => {
-          if (idx > 0 && idx % 2 === 0) {
-            y += recCardHeight + 5;
-            recX = margin;
-          }
-          
+          if (idx > 0 && idx % 2 === 0) { y += recCardHeight + 5; recX = margin; }
           checkNewPage(recCardHeight + 10);
-          
-          // Card with gradient effect (red tint)
-          doc.setFillColor(254, 242, 242);
-          doc.roundedRect(recX, y, recCardWidth, recCardHeight, 4, 4, 'F');
-          doc.setDrawColor(252, 165, 165);
-          doc.roundedRect(recX, y, recCardWidth, recCardHeight, 4, 4, 'S');
-          
-          // Quantity
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(18);
-          doc.setTextColor(220, 38, 38);
+          doc.setFillColor(254, 242, 242); doc.roundedRect(recX, y, recCardWidth, recCardHeight, 4, 4, 'F');
+          doc.setDrawColor(252, 165, 165); doc.roundedRect(recX, y, recCardWidth, recCardHeight, 4, 4, 'S');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(220, 38, 38);
           doc.text(item.packs.toLocaleString(), recX + 8, y + 15);
-          
-          // SKU name
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
-          doc.setTextColor(100, 100, 100);
-          const skuLines = doc.splitTextToSize(item.sku, recCardWidth - 16);
-          doc.text(skuLines, recX + 8, y + 23);
-          
-          // Gap info
-          doc.setFontSize(7);
-          doc.setTextColor(150, 150, 150);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+          doc.text(doc.splitTextToSize(item.sku, recCardWidth - 16), recX + 8, y + 23);
+          doc.setFontSize(7); doc.setTextColor(150, 150, 150);
           doc.text(`(${item.deficit.toLocaleString()} ${item.unit} gap)`, recX + 8, y + 31);
-          
           recX += recCardWidth + 10;
         });
-        
         y += recCardHeight + 10;
       } else {
-        doc.setFillColor(240, 253, 244);
-        doc.roundedRect(margin, y, cardWidth, 20, 4, 4, 'F');
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(22, 163, 74);
+        doc.setFillColor(240, 253, 244); doc.roundedRect(margin, y, cardWidth, 20, 4, 4, 'F');
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(22, 163, 74);
         doc.text('✓ No immediate purchases required. Review renewal quantities below.', margin + 10, y + 13);
         y += 28;
       }
       
-      // Renewal Recommendations - Visual Cards
-      checkNewPage(80);
-      addTitle('Renewal Recommendations', 14);
-      addLine();
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text('At next renewal, consider optimizing license quantities:', margin, y);
-      y += 10;
-      
+      // Renewal Recommendations
+      checkNewPage(80); addTitle('Renewal Recommendations', 14); addLine();
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(100, 100, 100);
+      doc.text('At next renewal, consider optimizing license quantities:', margin, y); y += 10;
       const renewItems = [];
-      products.forEach(p => {
-        const gap = p.ent - p.req;
-        if (gap > 0 && p.req > 0) {
-          const renewPacks = p.unit === 'CALs' ? p.req : Math.ceil(p.req / 2);
-          const savePacks = p.unit === 'CALs' ? gap : Math.ceil(gap / 2);
-          renewItems.push({ name: p.name, renew: renewPacks, save: savePacks });
-        }
-      });
-      
+      products.forEach(p => { const gap = p.ent - p.req; if (gap > 0 && p.req > 0) { renewItems.push({ name: p.name, renew: p.unit === 'CALs' ? p.req : Math.ceil(p.req / 2), save: p.unit === 'CALs' ? gap : Math.ceil(gap / 2) }); } });
       if (renewItems.length > 0) {
         renewItems.forEach(item => {
           checkNewPage(25);
-          
-          // Green card for savings
-          doc.setFillColor(240, 253, 244);
-          doc.roundedRect(margin, y, cardWidth, 18, 3, 3, 'F');
-          doc.setDrawColor(134, 239, 172);
-          doc.roundedRect(margin, y, cardWidth, 18, 3, 3, 'S');
-          
-          // Product name
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          doc.setTextColor(26, 26, 46);
+          doc.setFillColor(240, 253, 244); doc.roundedRect(margin, y, cardWidth, 18, 3, 3, 'F');
+          doc.setDrawColor(134, 239, 172); doc.roundedRect(margin, y, cardWidth, 18, 3, 3, 'S');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 26, 46);
           doc.text(item.name, margin + 5, y + 11);
-          
-          // Renew value
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(100, 100, 100);
+          doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100);
           doc.text(`Renew: ${item.renew.toLocaleString()}`, margin + 90, y + 11);
-          
-          // Savings badge
-          doc.setFillColor(22, 163, 74);
-          doc.roundedRect(margin + 140, y + 4, 30, 10, 2, 2, 'F');
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8);
-          doc.setTextColor(255, 255, 255);
+          doc.setFillColor(22, 163, 74); doc.roundedRect(margin + 140, y + 4, 30, 10, 2, 2, 'F');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(255, 255, 255);
           doc.text(`-${item.save.toLocaleString()}`, margin + 145, y + 11);
-          
           y += 22;
         });
-      } else {
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.text('No renewal optimization opportunities identified.', margin, y);
-        y += 10;
-      }
+      } else { doc.setFontSize(9); doc.setTextColor(100, 100, 100); doc.text('No renewal optimization opportunities identified.', margin, y); y += 10; }
       y += 5;
       
-      // Remediation Plan
-      checkNewPage(80);
-      addTitle('Remediation Plan', 14);
-      addLine();
-      
-      doc.setFont('helvetica', 'bold');
-      addText('1. Licensing Gap Resolution (Priority: HIGH)');
-      doc.setFont('helvetica', 'normal');
-      addText('   - Procure missing licenses identified above');
-      addText('   - Timeline: Immediate (within 30 days)');
-      y += 3;
-      
-      doc.setFont('helvetica', 'bold');
-      addText('2. End of Support Migration (Priority: MEDIUM)');
-      doc.setFont('helvetica', 'normal');
-      addText('   - 14 VMs running unsupported Windows versions');
-      addText('   - WS 2008 R2: 2 VMs, WS 2012: 3 VMs, WS 2012 R2: 9 VMs');
-      addText('   - Affected: MBI-Zerouno, Polen Food, DE (MBI-MBIKG)');
-      addText('   - Timeline: 90 days');
-      y += 3;
-      
-      doc.setFont('helvetica', 'bold');
-      addText('3. Architecture Optimization (Priority: LOW)');
-      doc.setFont('helvetica', 'normal');
-      addText('   - Review DRS/vMotion configurations');
-      addText('   - Evaluate Standard vs Datacenter requirements');
-      addText('   - Timeline: Next renewal cycle');
-      y += 10;
-      
       // BU Status Summary
-      doc.addPage();
-      y = 20;
-      addTitle('Business Unit Status Summary', 14);
-      addLine();
-      
-      // Table header
-      doc.setFillColor(240, 240, 240);
-      doc.rect(margin, y, pageWidth - 2 * margin, 8, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text('Unit', margin + 2, y + 5);
-      doc.text('Subsidiary', margin + 45, y + 5);
-      doc.text('Status', margin + 85, y + 5);
-      doc.text('Priority', margin + 115, y + 5);
-      doc.text('Response', margin + 140, y + 5);
-      y += 10;
-      
-      // Table rows
+      doc.addPage(); y = 20;
+      addTitle('Business Unit Status Summary', 14); addLine();
+      doc.setFillColor(240, 240, 240); doc.rect(margin, y, pageWidth - 2 * margin, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      doc.text('Unit', margin + 2, y + 5); doc.text('Subsidiary', margin + 45, y + 5);
+      doc.text('Status', margin + 85, y + 5); doc.text('Priority', margin + 115, y + 5);
+      doc.text('Response', margin + 140, y + 5); y += 10;
       doc.setFont('helvetica', 'normal');
       data.filter(bu => bu.questionnaire_status !== 'Out of Scope').forEach(bu => {
         checkNewPage(8);
-        doc.text(bu.unit_name.substring(0, 20), margin + 2, y + 4);
+        doc.text((bu.unit_name || '').substring(0, 20), margin + 2, y + 4);
         doc.text((bu.subsidiary || '').substring(0, 18), margin + 45, y + 4);
         doc.text(bu.questionnaire_status || '', margin + 85, y + 4);
         doc.text(bu.priority || '-', margin + 115, y + 4);
         doc.text((bu.response_rate || 0) + '%', margin + 140, y + 4);
         y += 7;
       });
-      
-      // Footer on each page
       const totalPages = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text('Confidential - Oetker Collection Microsoft Licensing Assessment', margin, 290);
-        doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, 290);
-      }
-      
-      // Save
+      for (let i = 1; i <= totalPages; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(150, 150, 150); doc.text('Confidential - Oetker Collection Microsoft Licensing Assessment', margin, 290); doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, 290); }
       doc.save('Oetker_MS_Licensing_Report_' + new Date().toISOString().split('T')[0] + '.pdf');
     }
 
+    // ==========================================
+    // MAIN APP - ALL DATA FROM GOOGLE SHEETS
+    // ==========================================
     function App() {
-      const [data, setData] = React.useState(DEFAULT_DATA);
-      const [loading, setLoading] = React.useState(false);
-      const [lastUpdate, setLastUpdate] = React.useState(new Date());
+      const [data, setData] = React.useState([]);
+      const [entitlements, setEntitlements] = React.useState({});
+      const [requirements, setRequirements] = React.useState({});
+      const [loading, setLoading] = React.useState(true);
+      const [lastUpdate, setLastUpdate] = React.useState(null);
       const [activeTab, setActiveTab] = React.useState("all");
       const [searchTerm, setSearchTerm] = React.useState("");
       const [selectedBU, setSelectedBU] = React.useState(null);
       const [subsidiaryFilter, setSubsidiaryFilter] = React.useState("all");
       const [showEOS, setShowEOS] = React.useState(false);
       const [showEntitlements, setShowEntitlements] = React.useState(false);
+      const [fetchError, setFetchError] = React.useState(null);
 
+      // Fetch all 3 sheets on load + auto-refresh
       React.useEffect(() => {
         if (!CONFIG.GOOGLE_SHEETS.ENABLED) return;
         const load = async () => {
           setLoading(true);
-          try { 
-            const d = await fetchGoogleSheetsData(); 
-            if (d && d.length) setData(d); 
-          } catch(e) { console.error('Data fetch failed:', e); }
-          setLastUpdate(new Date());
+          try {
+            const result = await fetchAllSheets();
+            if (result.data.length) setData(result.data);
+            if (Object.keys(result.entitlements).length) setEntitlements(result.entitlements);
+            if (Object.keys(result.requirements).length) setRequirements(result.requirements);
+            setLastUpdate(new Date());
+            setFetchError(null);
+          } catch(e) {
+            console.error('Fetch error:', e);
+            setFetchError(e.message);
+          }
           setLoading(false);
         };
         load();
-        if (CONFIG.AUTO_REFRESH_MINUTES > 0) { const i = setInterval(load, CONFIG.AUTO_REFRESH_MINUTES * 60000); return () => clearInterval(i); }
+        if (CONFIG.AUTO_REFRESH_MINUTES > 0) {
+          const i = setInterval(load, CONFIG.AUTO_REFRESH_MINUTES * 60000);
+          return () => clearInterval(i);
+        }
       }, []);
 
-      // Get subsidiaries with data status
-      const subsidiaries = ["Martin Braun", "Budenheim", "Henkell Freixenet", "OE. Hotels"];
-      
+      // Derive subsidiaries dynamically from data
+      const subsidiaries = React.useMemo(() => {
+        const subs = [...new Set(data.map(bu => bu.subsidiary).filter(Boolean))];
+        // Stable order: known ones first, then any new
+        const order = ["Martin Braun", "Budenheim", "Henkell Freixenet", "OE. Hotels"];
+        return [...order.filter(s => subs.includes(s)), ...subs.filter(s => !order.includes(s))];
+      }, [data]);
+
       const subsidiaryFiltered = subsidiaryFilter === "all" 
         ? data 
         : data.filter(bu => bu.subsidiary === subsidiaryFilter);
 
       const filtered = subsidiaryFiltered.filter(bu => {
-        const match = bu.unit_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                      bu.country.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                      bu.unit_id.toLowerCase().includes(searchTerm.toLowerCase());
+        const match = (bu.unit_name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      (bu.country || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      (bu.unit_id || '').toLowerCase().includes(searchTerm.toLowerCase());
         if (activeTab === "all") return match;
-        if (activeTab === "high") return match && (bu.priority === "High" || bu.priority === "Critical");
-        if (activeTab === "pending") return match && (bu.questionnaire_status === "Pending" || bu.response_rate < 70);
+        if (activeTab === "high") return match && (bu.priority === "High" || bu.priority === "Critical" || bu.priority === "HIGH" || bu.priority === "CRITICAL");
+        if (activeTab === "pending") return match && ((bu.questionnaire_status || '').includes("Pending") || (bu.questionnaire_status || '').includes("Progress") || (bu.response_rate || 0) < 70);
         if (activeTab === "complete") return match && bu.questionnaire_status === "Complete";
         return match;
       });
 
-      // Calculate aggregated license data based on filter
+      // Calculate aggregated license data — ALL from sheets
       const getAggregatedLicenses = () => {
         if (subsidiaryFilter === "all") {
-          // Sum only subsidiaries with deployment data (hasData: true)
-          const analyzedSubs = Object.entries(LICENSE_ENTITLEMENTS).filter(([_, s]) => s.hasData);
+          const allEnts = Object.values(entitlements);
+          const allReqs = Object.values(requirements);
           const entitled = {
-            ws_standard: analyzedSubs.reduce((sum, [_, s]) => sum + s.ws_standard, 0),
-            ws_datacenter: analyzedSubs.reduce((sum, [_, s]) => sum + s.ws_datacenter, 0),
-            sql_standard: analyzedSubs.reduce((sum, [_, s]) => sum + s.sql_standard, 0),
-            sql_enterprise: analyzedSubs.reduce((sum, [_, s]) => sum + s.sql_enterprise, 0),
-            rds_cals: analyzedSubs.reduce((sum, [_, s]) => sum + s.rds_cals, 0),
+            ws_standard: allEnts.reduce((s, e) => s + (e.ws_standard || 0), 0),
+            ws_datacenter: allEnts.reduce((s, e) => s + (e.ws_datacenter || 0), 0),
+            sql_standard: allEnts.reduce((s, e) => s + (e.sql_standard || 0), 0),
+            sql_enterprise: allEnts.reduce((s, e) => s + (e.sql_enterprise || 0), 0),
+            rds_cals: allEnts.reduce((s, e) => s + (e.rds_cals || 0), 0),
           };
           const required = {
-            ws_standard: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.ws_standard, 0),
-            ws_datacenter: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.ws_datacenter, 0),
-            sql_standard: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.sql_standard, 0),
-            sql_enterprise: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.sql_enterprise, 0),
-            rds_cals: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.rds_cals, 0),
-            ws_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.ws_deployed, 0),
-            sql_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.sql_deployed, 0),
-            rds_deployed: Object.values(LICENSE_REQUIREMENTS).reduce((sum, s) => sum + s.rds_deployed, 0),
+            ws_standard: allReqs.reduce((s, r) => s + (r.ws_standard || 0), 0),
+            ws_datacenter: allReqs.reduce((s, r) => s + (r.ws_datacenter || 0), 0),
+            sql_standard: allReqs.reduce((s, r) => s + (r.sql_standard || 0), 0),
+            sql_enterprise: allReqs.reduce((s, r) => s + (r.sql_enterprise || 0), 0),
+            rds_cals: allReqs.reduce((s, r) => s + (r.rds_cals || 0), 0),
+            ws_deployed: allReqs.reduce((s, r) => s + (r.ws_deployed || 0), 0),
+            sql_deployed: allReqs.reduce((s, r) => s + (r.sql_deployed || 0), 0),
+            rds_deployed: allReqs.reduce((s, r) => s + (r.rds_deployed || 0), 0),
           };
-          const hasData = analyzedSubs.length > 0;
+          const hasData = allEnts.length > 0;
           return { entitled, required, hasData };
         } else {
-          const entitled = LICENSE_ENTITLEMENTS[subsidiaryFilter] || {};
-          const required = LICENSE_REQUIREMENTS[subsidiaryFilter] || {};
+          const entitled = entitlements[subsidiaryFilter] || {};
+          const required = requirements[subsidiaryFilter] || {};
           const hasData = entitled.hasData || false;
           return { entitled, required, hasData };
         }
@@ -1513,21 +1276,48 @@
 
       const { entitled, required, hasData } = getAggregatedLicenses();
 
-      const activeData = subsidiaryFiltered.filter(b => b.questionnaire_status !== "Out of Scope");
+      const activeData = subsidiaryFiltered.filter(b => b.questionnaire_status !== "Out of Scope" && b.questionnaire_status !== "N/A");
       const kpis = { 
         total: activeData.length, 
         complete: activeData.filter(b => b.questionnaire_status === "Complete").length,
-        avg: activeData.length > 0 ? Math.round(activeData.reduce((a,b) => a + (b.response_rate||0), 0) / activeData.length) : 0, 
-        critical: activeData.filter(b => b.priority === "Critical" || b.priority === "High").length, 
-        pending: activeData.filter(b => b.questionnaire_status === "Pending").length
+        avg: activeData.length > 0 ? Math.round(activeData.reduce((a,b) => a + (parseInt(b.response_rate)||0), 0) / activeData.length) : 0, 
+        critical: activeData.filter(b => {
+          const p = (b.priority || '').toUpperCase();
+          return p === 'CRITICAL' || p === 'HIGH';
+        }).length, 
+        pending: activeData.filter(b => {
+          const s = b.questionnaire_status || '';
+          return s.includes('Pending') || s.includes('Progress');
+        }).length
       };
+
+      // Compute EOS data dynamically from data
+      const eosData = React.useMemo(() => {
+        const eosBUs = data.filter(bu => {
+          const risk = (bu.eos_risk || '').toUpperCase();
+          return risk !== 'NO' && risk !== 'N/A' && risk !== '' && risk !== 'NO (WS 2016 → 2027)';
+        });
+        // Parse EOS versions from eos_risk field
+        const versions = {};
+        let totalEOS = 0;
+        const affectedBUs = [];
+        eosBUs.forEach(bu => {
+          affectedBUs.push(bu.unit_name);
+          const risk = bu.eos_risk || '';
+          // Extract version mentions
+          if (risk.includes('2003')) { versions['WS 2003'] = (versions['WS 2003'] || 0) + 1; totalEOS++; }
+          if (risk.includes('2008')) { versions['WS 2008/R2'] = (versions['WS 2008/R2'] || 0) + 1; totalEOS++; }
+          if (risk.includes('2012')) { versions['WS 2012/R2'] = (versions['WS 2012/R2'] || 0) + 1; totalEOS++; }
+        });
+        return { versions, totalCount: eosBUs.length, affectedBUs: [...new Set(affectedBUs)] };
+      }, [data]);
 
       const statusClass = s => {
         if (s === "Complete") return "complete";
         if (s === "Received") return "received";
-        if (s === "Pending") return "pending";
+        if ((s || '').includes("Pending") || (s || '').includes("Progress")) return "pending";
         if (s === "Incomplete") return "incomplete";
-        if (s === "Out of Scope") return "out-of-scope";
+        if (s === "Out of Scope" || s === "N/A") return "out-of-scope";
         if (s === "No Data") return "no-data";
         return "not-sent";
       };
@@ -1540,7 +1330,33 @@
         return "martin-braun";
       };
 
-      const hasLicense = bu => bu.ws_deployed !== '' || bu.sql_deployed !== '' || bu.rds_deployed !== '';
+      const hasLicense = bu => (bu.ws_deployed !== '' && bu.ws_deployed !== 0) || (bu.sql_deployed !== '' && bu.sql_deployed !== 0) || (bu.rds_deployed !== '' && bu.rds_deployed !== 0);
+
+      // Loading state
+      if (loading && data.length === 0) {
+        return (
+          <div className="app-container" style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'80vh'}}>
+            <div style={{textAlign:'center',color:'white'}}>
+              <div className="loading-indicator" style={{fontSize:'1.2rem',marginBottom:'1rem'}}><div className="loading-dot"></div> Loading data from Google Sheets...</div>
+              <div style={{fontSize:'0.8rem',opacity:0.6}}>Fetching Data, Entitlements & Requirements sheets</div>
+            </div>
+          </div>
+        );
+      }
+
+      // Error state
+      if (fetchError && data.length === 0) {
+        return (
+          <div className="app-container" style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'80vh'}}>
+            <div style={{textAlign:'center',color:'white',maxWidth:'400px'}}>
+              <div style={{fontSize:'3rem',marginBottom:'1rem'}}>⚠️</div>
+              <div style={{fontSize:'1.2rem',marginBottom:'0.5rem'}}>Unable to load data</div>
+              <div style={{fontSize:'0.85rem',opacity:0.7,marginBottom:'1rem'}}>{fetchError}</div>
+              <div style={{fontSize:'0.75rem',opacity:0.5}}>Check that the Google Sheet is shared publicly and the API key is valid.</div>
+            </div>
+          </div>
+        );
+      }
 
       return (
         <div className="app-container">
@@ -1548,7 +1364,7 @@
             <header className="header">
               <div className="logo-section">
                 <svg className="logo-img" viewBox="0 0 200 50"><circle cx="12" cy="12" r="5" fill="#E87A2A"/><circle cx="22" cy="8" r="8" fill="#E87A2A"/><circle cx="12" cy="28" r="8" fill="#E87A2A"/><circle cx="22" cy="38" r="5" fill="#E87A2A"/><circle cx="8" cy="40" r="4" fill="#E87A2A"/><text x="38" y="32" fontFamily="DM Sans" fontSize="24" fontWeight="700" fill="white">appstrato</text></svg>
-                <div className="logo-text"><h1>Microsoft Licensing Tracker</h1><span>Oetker Collection</span></div>
+                <div className="logo-text"><h1>Microsoft Licensing Tracker</h1><span>Oetker Collection <span className="data-source-badge">📊 Live from Google Sheets</span></span></div>
               </div>
               <div className="header-right">
                 <div className="subsidiary-filter">
@@ -1556,19 +1372,19 @@
                   <select value={subsidiaryFilter} onChange={e => setSubsidiaryFilter(e.target.value)}>
                     <option value="all">All Subsidiaries</option>
                     {subsidiaries.map(s => (
-                      <option key={s} value={s}>{s} {!LICENSE_ENTITLEMENTS[s]?.hasData ? '(No data)' : ''}</option>
+                      <option key={s} value={s}>{s} {!entitlements[s]?.hasData ? '(No data)' : ''}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <div className="last-update">Updated: {lastUpdate.toLocaleString()}</div>
+                  <div className="last-update">Updated: {lastUpdate ? lastUpdate.toLocaleString() : '—'}</div>
                   {loading && <div className="loading-indicator"><div className="loading-dot"></div> Syncing...</div>}
                 </div>
               </div>
             </header>
           </div>
 
-          {/* KPI Grid - 5 cards */}
+          {/* KPI Grid */}
           <div className="kpi-grid">
             <div className="kpi-card"><div className="kpi-label">Total BUs</div><div className="kpi-value">{kpis.total}</div></div>
             <div className="kpi-card green"><div className="kpi-label">Complete</div><div className="kpi-value">{kpis.complete}</div><div className="kpi-subtitle">{kpis.total > 0 ? Math.round(kpis.complete/kpis.total*100) : 0}%</div></div>
@@ -1577,70 +1393,30 @@
             <div className="kpi-card yellow"><div className="kpi-label">Pending</div><div className="kpi-value">{kpis.pending}</div></div>
           </div>
 
-          {/* Main License Section */}
+          {/* License Compliance Section */}
           <div className="license-section">
-            {/* Compliance Bars */}
             <div className="compliance-panel">
               <div className="section-header">
                 <span className="section-title">License Compliance</span>
                 <span className="estimated-label">(Estimated)</span>
-                {subsidiaryFilter !== "all" && required.ws_datacenter === 0 && required.ws_standard === 0 && entitled.ws_standard > 0 && subsidiaryFilter === "Henkell Freixenet" && (
+                {subsidiaryFilter !== "all" && (requirements[subsidiaryFilter]?.ws_datacenter || 0) === 0 && (requirements[subsidiaryFilter]?.ws_standard || 0) === 0 && (entitlements[subsidiaryFilter]?.ws_standard || 0) > 0 && (
                   <span className="pending-badge">⏳ Deployment data pending</span>
                 )}
-                {subsidiaryFilter === "OE. Hotels" && (
-                  <span className="surplus-badge">💰 Unused licenses - potential reallocation</span>
+                {subsidiaryFilter !== "all" && entitlements[subsidiaryFilter]?.notes && entitlements[subsidiaryFilter].notes.includes('SA Only') && (
+                  <span className="pending-badge">⚠️ G3 shows SA Only - verify VLSC/EA</span>
                 )}
                 <div className="section-header-spacer"></div>
-                <button className="export-btn" onClick={() => setShowEntitlements(true)}>
-                  📜 Entitlements
-                </button>
-                <button className="export-btn disabled" disabled title="Will be activated upon completion">
-                  📄 Export
-                </button>
+                <button className="export-btn" onClick={() => setShowEntitlements(true)}>📜 Entitlements</button>
+                <button className="export-btn" onClick={() => generatePDF(data, entitled, required, kpis)}>📄 Export</button>
               </div>
               
               {hasData ? (
                 <div className="compliance-bars">
-                  <ComplianceBar 
-                    label="Windows Server Datacenter" 
-                    metric="Cores" 
-                    required={required.ws_datacenter || 0} 
-                    entitled={entitled.ws_datacenter || 0}
-                    icon="🖥️"
-                    sku="WS Datacenter 2-Core LIC+SA"
-                  />
-                  <ComplianceBar 
-                    label="Windows Server Standard" 
-                    metric="Cores" 
-                    required={required.ws_standard || 0} 
-                    entitled={entitled.ws_standard || 0}
-                    icon="🖥️"
-                    sku="WS Standard 2-Core LIC+SA"
-                  />
-                  <ComplianceBar 
-                    label="SQL Server Enterprise" 
-                    metric="Cores" 
-                    required={required.sql_enterprise || 0} 
-                    entitled={entitled.sql_enterprise || 0}
-                    icon="🗄️"
-                    sku="SQL Enterprise 2-Core LIC+SA"
-                  />
-                  <ComplianceBar 
-                    label="SQL Server Standard" 
-                    metric="Cores" 
-                    required={required.sql_standard || 0} 
-                    entitled={entitled.sql_standard || 0}
-                    icon="🗄️"
-                    sku="SQL Standard 2-Core LIC+SA"
-                  />
-                  <ComplianceBar 
-                    label="RDS User CALs" 
-                    metric="User CALs" 
-                    required={required.rds_cals || 0} 
-                    entitled={entitled.rds_cals || 0}
-                    icon="👥"
-                    sku="RDS User CAL LIC+SA"
-                  />
+                  <ComplianceBar label="Windows Server Datacenter" metric="Cores" required={required.ws_datacenter || 0} entitled={entitled.ws_datacenter || 0} icon="🖥️" sku="WS Datacenter 2-Core LIC+SA" />
+                  <ComplianceBar label="Windows Server Standard" metric="Cores" required={required.ws_standard || 0} entitled={entitled.ws_standard || 0} icon="🖥️" sku="WS Standard 2-Core LIC+SA" />
+                  <ComplianceBar label="SQL Server Enterprise" metric="Cores" required={required.sql_enterprise || 0} entitled={entitled.sql_enterprise || 0} icon="🗄️" sku="SQL Enterprise 2-Core LIC+SA" />
+                  <ComplianceBar label="SQL Server Standard" metric="Cores" required={required.sql_standard || 0} entitled={entitled.sql_standard || 0} icon="🗄️" sku="SQL Standard 2-Core LIC+SA" />
+                  <ComplianceBar label="RDS User CALs" metric="User CALs" required={required.rds_cals || 0} entitled={entitled.rds_cals || 0} icon="👥" sku="RDS User CAL LIC+SA" />
                 </div>
               ) : (
                 <div className="no-data-state">
@@ -1668,7 +1444,7 @@
             <div className="eos-badge" onClick={() => setShowEOS(true)}>
               <span className="eos-badge-icon">⚠️</span>
               <span className="eos-badge-text">End of Support</span>
-              <span className="eos-badge-count">70</span>
+              <span className="eos-badge-count">{eosData.totalCount}</span>
             </div>
           </div>
 
@@ -1678,21 +1454,22 @@
                 {bu.priority && bu.priority !== '' && <span className={`priority-badge ${bu.priority.toLowerCase()}`}>{bu.priority}</span>}
                 <div className="bu-card-header">
                   <div>
-                    <span className="bu-unit-badge">Unit {bu.unit_id}</span>
+                    <span className="bu-unit-badge">{bu.unit_id}</span>
                     <div className="bu-name">{bu.unit_name}</div>
                     <div className="bu-country">📍 {bu.country}</div>
                     <div className="bu-subsidiary">
                       <span className={`subsidiary-tag ${subsidiaryClass(bu.subsidiary)}`}>{bu.subsidiary}</span>
                     </div>
+                    {bu.contact_name && <div style={{fontSize:'0.7rem',color:'var(--text-muted)',marginTop:'0.25rem'}}>👤 {bu.contact_name}</div>}
                   </div>
                   <span className={`status-badge ${statusClass(bu.questionnaire_status)}`}><span className="status-dot"></span>{bu.questionnaire_status}</span>
                 </div>
                 {bu.infrastructure_summary && <div className="bu-infra-summary">🏗️ {bu.infrastructure_summary}</div>}
                 <div className="progress-section"><div className="progress-header"><span className="progress-label">Response Rate</span><span className="progress-value">{bu.response_rate}%</span></div><div className="progress-bar"><div className="progress-fill" style={{width:`${bu.response_rate}%`}}></div></div></div>
                 <div className="license-summary">
-                  {bu.ws_deployed !== '' && <span className="license-tag ws">🖥️ WS: {bu.ws_deployed}</span>}
-                  {bu.sql_deployed !== '' && <span className="license-tag sql">🗄️ SQL: {bu.sql_deployed}</span>}
-                  {bu.rds_deployed !== '' && <span className="license-tag rds">👥 RDS: {bu.rds_deployed}</span>}
+                  {bu.ws_deployed !== '' && bu.ws_deployed !== 0 && <span className="license-tag ws">🖥️ WS: {bu.ws_deployed}</span>}
+                  {bu.sql_deployed !== '' && bu.sql_deployed !== 0 && <span className="license-tag sql">🗄️ SQL: {bu.sql_deployed}</span>}
+                  {bu.rds_deployed !== '' && bu.rds_deployed !== 0 && <span className="license-tag rds">👥 RDS: {bu.rds_deployed}</span>}
                   {!hasLicense(bu) && <span className="no-data">No license data yet</span>}
                 </div>
                 <div className="checklist-mini">{(bu.steps||[]).map((d,i) => <div key={i} className={`check-dot ${d?'done':''}`}></div>)}</div>
@@ -1700,15 +1477,17 @@
             ))}
           </div>
 
+          {/* BU Detail Modal */}
           {selectedBU && (
             <div className="modal-overlay" onClick={() => setSelectedBU(null)}>
               <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                   <div>
-                    <span className="bu-unit-badge">Unit {selectedBU.unit_id}</span>
+                    <span className="bu-unit-badge">{selectedBU.unit_id}</span>
                     <h2 style={{fontSize:'1.5rem',marginTop:'0.5rem',color:'var(--text-primary)'}}>{selectedBU.unit_name}</h2>
                     <div className="bu-country">📍 {selectedBU.country}</div>
                     <div style={{marginTop:'0.5rem'}}><span className={`subsidiary-tag ${subsidiaryClass(selectedBU.subsidiary)}`}>{selectedBU.subsidiary}</span></div>
+                    {selectedBU.contact_name && <div style={{marginTop:'0.25rem',fontSize:'0.85rem',color:'var(--text-secondary)'}}>👤 {selectedBU.contact_name}</div>}
                   </div>
                   <button className="modal-close" onClick={() => setSelectedBU(null)}>×</button>
                 </div>
@@ -1719,179 +1498,99 @@
                       <div className="info-item"><div className="info-label">Response</div><div className="info-value">{selectedBU.response_rate}%</div></div>
                       <div className="info-item"><div className="info-label">Priority</div><div className="info-value">{selectedBU.priority || '—'}</div></div>
                       <div className="info-item"><div className="info-label">Country</div><div className="info-value">{selectedBU.country}</div></div>
-                      {selectedBU.infrastructure_summary && <div className="info-item full-width"><div className="info-label">Infrastructure Summary</div><div className="info-value infra">🏗️ {selectedBU.infrastructure_summary}</div></div>}
+                      <div className="info-item"><div className="info-label">Hypervisor</div><div className="info-value">{selectedBU.hypervisor || '—'}</div></div>
+                      <div className="info-item"><div className="info-label">Hosts</div><div className="info-value">{selectedBU.esxi_hosts || '—'}</div></div>
+                      <div className="info-item"><div className="info-label">Cores</div><div className="info-value">{selectedBU.total_physical_cores || '—'}</div></div>
+                      <div className="info-item"><div className="info-label">Users</div><div className="info-value">{selectedBU.users || '—'}</div></div>
+                      {selectedBU.vmotion_drs && <div className="info-item full-width"><div className="info-label">vMotion/DRS</div><div className="info-value">{selectedBU.vmotion_drs}</div></div>}
+                      {selectedBU.infrastructure_summary && <div className="info-item full-width"><div className="info-label">Notes</div><div className="info-value infra">🏗️ {selectedBU.infrastructure_summary}</div></div>}
                     </div>
                   </div>
-                  <div className="detail-section"><h3>License Requirements</h3><table className="license-table"><thead><tr><th>Product</th><th>Deployed</th><th>Required</th></tr></thead><tbody><tr><td><div className="product-cell"><span className="product-icon ws">WS</span>Windows Server</div></td><td className="value-cell">{selectedBU.ws_deployed!==''?selectedBU.ws_deployed:'—'}</td><td className="required-cell">{selectedBU.ws_licenses_required||'—'}</td></tr><tr><td><div className="product-cell"><span className="product-icon sql">SQL</span>SQL Server</div></td><td className="value-cell">{selectedBU.sql_deployed!==''?selectedBU.sql_deployed:'—'}</td><td className="required-cell">{selectedBU.sql_licenses_required||'—'}</td></tr><tr><td><div className="product-cell"><span className="product-icon rds">RDS</span>Remote Desktop</div></td><td className="value-cell">{selectedBU.rds_deployed!==''?selectedBU.rds_deployed:'—'}</td><td className="required-cell">{selectedBU.rds_licenses_required||'—'}</td></tr></tbody></table></div>
-                  {selectedBU.critical_points && <div className="detail-section"><h3>Critical Points</h3><div className="alert-box"><div className="alert-title">⚠️ Attention</div><div className="alert-content">{selectedBU.critical_points}</div></div></div>}
-                  {selectedBU.missing_data && <div className="detail-section"><h3>Missing Data</h3><div className="alert-box warning"><div className="alert-title">📋 Requested</div><div className="alert-content">{selectedBU.missing_data}</div></div></div>}
+                  <div className="detail-section"><h3>License Requirements</h3>
+                    <table className="license-table"><thead><tr><th>Product</th><th>Deployed</th><th>Details</th></tr></thead><tbody>
+                      <tr><td><div className="product-cell"><span className="product-icon ws">WS</span>Windows Server</div></td><td className="value-cell">{selectedBU.ws_deployed !== '' && selectedBU.ws_deployed !== 0 ? selectedBU.ws_deployed + ' VMs' : '—'}</td><td className="required-cell">{selectedBU.ws_versions_deployed || '—'}</td></tr>
+                      <tr><td><div className="product-cell"><span className="product-icon sql">SQL</span>SQL Server</div></td><td className="value-cell">{selectedBU.sql_deployed !== '' && selectedBU.sql_deployed !== 0 ? selectedBU.sql_deployed + ' inst.' : '—'}</td><td className="required-cell">{selectedBU.sql_versions_deployed || '—'}</td></tr>
+                      <tr><td><div className="product-cell"><span className="product-icon rds">RDS</span>Remote Desktop</div></td><td className="value-cell">{selectedBU.rds_deployed || '—'}</td><td className="required-cell">{selectedBU.rds_in_use || '—'}</td></tr>
+                    </tbody></table>
+                  </div>
+                  {selectedBU.eos_risk && selectedBU.eos_risk !== 'NO' && selectedBU.eos_risk !== 'N/A' && (
+                    <div className="detail-section"><h3>End of Support Risk</h3><div className="alert-box"><div className="alert-title">⚠️ EOS Risk</div><div className="alert-content">{selectedBU.eos_risk}</div></div></div>
+                  )}
                   <div className="detail-section"><h3>Workflow</h3><div className="checklist-full">{WORKFLOW_STEPS.map((s,i) => <div key={i} className="checklist-item"><div className={`checklist-checkbox ${(selectedBU.steps||[])[i]?'checked':''}`}></div><span className={`checklist-text ${(selectedBU.steps||[])[i]?'done':''}`}>{s}</span></div>)}</div></div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* EOS Modal */}
+          {/* EOS Modal — DYNAMIC */}
           {showEOS && (
             <div className="modal-overlay" onClick={() => setShowEOS(false)}>
               <div className="eos-modal" onClick={e => e.stopPropagation()}>
                 <div className="eos-modal-header">
-                  <div className="eos-modal-title">
-                    <span>⚠️</span>
-                    <span>End of Support Systems</span>
-                  </div>
+                  <div className="eos-modal-title"><span>⚠️</span><span>End of Support Systems</span></div>
                   <button className="eos-modal-close" onClick={() => setShowEOS(false)}>×</button>
                 </div>
-                <div className="eos-modal-value">70</div>
-                <div className="eos-modal-label">VMs running unsupported Windows versions</div>
+                <div className="eos-modal-value">{eosData.totalCount}</div>
+                <div className="eos-modal-label">BUs with End of Support Windows Server versions</div>
                 <div className="eos-modal-breakdown">
-                  <div className="eos-modal-item">
-                    <div className="eos-modal-item-left">
-                      <div className="eos-modal-dot critical"></div>
-                      <span className="eos-modal-item-label">Windows Server 2003</span>
+                  {Object.entries(eosData.versions).sort().map(([ver, count]) => (
+                    <div key={ver} className="eos-modal-item">
+                      <div className="eos-modal-item-left">
+                        <div className={`eos-modal-dot ${ver.includes('2003') || ver.includes('2008') ? 'critical' : 'high'}`}></div>
+                        <span className="eos-modal-item-label">{ver}</span>
+                      </div>
+                      <span className="eos-modal-item-count">{count} BU{count > 1 ? 's' : ''}</span>
                     </div>
-                    <span className="eos-modal-item-count">21</span>
-                  </div>
-                  <div className="eos-modal-item">
-                    <div className="eos-modal-item-left">
-                      <div className="eos-modal-dot critical"></div>
-                      <span className="eos-modal-item-label">Windows Server 2008 R2</span>
-                    </div>
-                    <span className="eos-modal-item-count">22</span>
-                  </div>
-                  <div className="eos-modal-item">
-                    <div className="eos-modal-item-left">
-                      <div className="eos-modal-dot high"></div>
-                      <span className="eos-modal-item-label">Windows Server 2012</span>
-                    </div>
-                    <span className="eos-modal-item-count">18</span>
-                  </div>
-                  <div className="eos-modal-item">
-                    <div className="eos-modal-item-left">
-                      <div className="eos-modal-dot medium"></div>
-                      <span className="eos-modal-item-label">Windows Server 2012 R2</span>
-                    </div>
-                    <span className="eos-modal-item-count">9</span>
-                  </div>
+                  ))}
                 </div>
                 <div className="eos-modal-affected">
-                  <strong>Affected BUs:</strong> MBI-Zerouno, Polen Food, DE (MBI-MBIKG), Henkell Freixenet (56 VMs)
+                  <strong>Affected BUs:</strong> {eosData.affectedBUs.join(', ')}
                 </div>
               </div>
             </div>
           )}
 
+          {/* Entitlements Modal — DYNAMIC from Entitlements sheet */}
           {showEntitlements && (
             <div className="modal-overlay" onClick={() => setShowEntitlements(false)}>
-              <div className="entitlements-modal" onClick={e => e.stopPropagation()} style={{maxWidth: '900px'}}>
+              <div className="entitlements-modal" onClick={e => e.stopPropagation()}>
                 <div className="eos-modal-header">
-                  <div className="eos-modal-title">
-                    <span>📜</span>
-                    <span>License Entitlements by Subsidiary</span>
-                  </div>
+                  <div className="eos-modal-title"><span>📜</span><span>License Entitlements by Subsidiary</span></div>
                   <button className="eos-modal-close" onClick={() => setShowEntitlements(false)}>×</button>
                 </div>
-                
-                <div style={{fontSize: '0.75rem', color: '#E87A2A', fontWeight: '600', marginBottom: '8px', marginTop: '10px'}}>CORE LICENSES (EA + MPSA)</div>
                 <div className="entitlements-table-wrapper">
                   <table className="entitlements-table">
                     <thead>
-                      <tr>
-                        <th>Subsidiary</th>
-                        <th>WS DC</th>
-                        <th>WS Std</th>
-                        <th>SQL Ent</th>
-                        <th>SQL Std</th>
-                        <th>RDS User</th>
-                      </tr>
+                      <tr><th>Subsidiary</th><th>WS DC</th><th>WS Std</th><th>SQL Ent</th><th>SQL Std</th><th>RDS</th><th>Source</th></tr>
                     </thead>
                     <tbody>
-                      {Object.entries(LICENSE_ENTITLEMENTS).map(([name, ent]) => (
+                      {Object.entries(entitlements).map(([name, ent]) => (
                         <tr key={name}>
                           <td className="sub-name">{name}</td>
-                          <td>{ent.ws_datacenter.toLocaleString()}</td>
-                          <td>{ent.ws_standard.toLocaleString()}</td>
-                          <td>{ent.sql_enterprise.toLocaleString()}</td>
-                          <td>{ent.sql_standard.toLocaleString()}</td>
-                          <td>{ent.rds_cals.toLocaleString()}</td>
+                          <td>{(ent.ws_datacenter || 0).toLocaleString()}</td>
+                          <td>{(ent.ws_standard || 0).toLocaleString()}</td>
+                          <td>{(ent.sql_enterprise || 0).toLocaleString()}</td>
+                          <td>{(ent.sql_standard || 0).toLocaleString()}</td>
+                          <td>{(ent.rds_cals || 0).toLocaleString()}</td>
+                          <td style={{fontSize:'0.7rem',opacity:0.7}}>{ent.source || ''}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
                       <tr>
                         <td className="sub-name">TOTAL</td>
-                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.ws_datacenter, 0).toLocaleString()}</td>
-                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.ws_standard, 0).toLocaleString()}</td>
-                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.sql_enterprise, 0).toLocaleString()}</td>
-                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.sql_standard, 0).toLocaleString()}</td>
-                        <td>{Object.values(LICENSE_ENTITLEMENTS).reduce((s,e) => s + e.rds_cals, 0).toLocaleString()}</td>
+                        <td>{Object.values(entitlements).reduce((s,e) => s + (e.ws_datacenter||0), 0).toLocaleString()}</td>
+                        <td>{Object.values(entitlements).reduce((s,e) => s + (e.ws_standard||0), 0).toLocaleString()}</td>
+                        <td>{Object.values(entitlements).reduce((s,e) => s + (e.sql_enterprise||0), 0).toLocaleString()}</td>
+                        <td>{Object.values(entitlements).reduce((s,e) => s + (e.sql_standard||0), 0).toLocaleString()}</td>
+                        <td>{Object.values(entitlements).reduce((s,e) => s + (e.rds_cals||0), 0).toLocaleString()}</td>
+                        <td></td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
-                
-                <div style={{fontSize: '0.75rem', color: '#E87A2A', fontWeight: '600', marginBottom: '8px', marginTop: '15px'}}>ADDITIONAL LICENSES (MPSA)</div>
-                <div className="entitlements-table-wrapper">
-                  <table className="entitlements-table">
-                    <thead>
-                      <tr>
-                        <th>Subsidiary</th>
-                        <th>RDS Device</th>
-                        <th>WS CAL</th>
-                        <th>SQL CAL</th>
-                        <th>Exchange</th>
-                        <th>SharePoint</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td className="sub-name">Budenheim</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>2 Srv</td>
-                      </tr>
-                      <tr>
-                        <td className="sub-name">Martin Braun</td>
-                        <td>10</td>
-                        <td>60</td>
-                        <td>2</td>
-                        <td>1 Srv + 60 CAL</td>
-                        <td>0</td>
-                      </tr>
-                      <tr>
-                        <td className="sub-name">Henkell Freixenet</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>0</td>
-                      </tr>
-                      <tr>
-                        <td className="sub-name">OE. Hotels</td>
-                        <td>3</td>
-                        <td>0</td>
-                        <td>10</td>
-                        <td>0</td>
-                        <td>0</td>
-                      </tr>
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td className="sub-name">TOTAL</td>
-                        <td>13</td>
-                        <td>60</td>
-                        <td>12</td>
-                        <td>1 Srv + 60 CAL</td>
-                        <td>2 Srv</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-                
                 <div className="entitlements-note">
-                  * EA = Enterprise Agreement (Core licenses) | MPSA = Microsoft Products and Services Agreement (CALs, Server licenses)
+                  * All entitlement data loaded dynamically from Google Sheets "Entitlements" tab
                 </div>
               </div>
             </div>
