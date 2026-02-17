@@ -858,7 +858,7 @@
       GOOGLE_SHEETS: {
         ENABLED: true,
         API_KEY: 'AIzaSyD7F4sjl8DUYvfLBOq5N5cXm-AThaDnGdY',
-        SPREADSHEET_ID: '1RldtkHxCkFH9iDVNxEuAW_C1bWSzOlNOv_e5aPjvBFc',
+        SPREADSHEET_ID: '1PlFCpy70ZGVmXKL5hFhmLjhhJp-1PWbV3_wz_T5g6EE',
         SHEETS: { DATA: 'Data', ENTITLEMENTS: 'Entitlements', REQUIREMENTS: 'Requirements' }
       },
       AUTO_REFRESH_MINUTES: 5
@@ -950,16 +950,20 @@
 
     async function fetchAllSheets() {
       const { SHEETS } = CONFIG.GOOGLE_SHEETS;
-      const [dataRows, entRows, reqRows] = await Promise.all([
-        fetchSheet(SHEETS.DATA),
-        fetchSheet(SHEETS.ENTITLEMENTS),
-        fetchSheet(SHEETS.REQUIREMENTS)
-      ]);
-      return {
-        data: parseDataSheet(dataRows),
-        entitlements: parseEntitlementsSheet(entRows),
-        requirements: parseRequirementsSheet(reqRows)
-      };
+      const results = { data: [], entitlements: {}, requirements: {}, warnings: [] };
+
+      // Fetch each sheet independently — never block on missing tabs
+      try { results.data = parseDataSheet(await fetchSheet(SHEETS.DATA)); }
+      catch(e) { results.warnings.push(`Data: ${e.message}`); }
+
+      try { results.entitlements = parseEntitlementsSheet(await fetchSheet(SHEETS.ENTITLEMENTS)); }
+      catch(e) { results.warnings.push(`Entitlements tab not found — create it in Google Sheets`); }
+
+      try { results.requirements = parseRequirementsSheet(await fetchSheet(SHEETS.REQUIREMENTS)); }
+      catch(e) { results.warnings.push(`Requirements tab not found — create it in Google Sheets`); }
+
+      if (results.warnings.length) console.warn('Sheet warnings:', results.warnings);
+      return results;
     }
 
     // ==========================================
@@ -1193,6 +1197,7 @@
       const [showEOS, setShowEOS] = React.useState(false);
       const [showEntitlements, setShowEntitlements] = React.useState(false);
       const [fetchError, setFetchError] = React.useState(null);
+      const [sheetWarnings, setSheetWarnings] = React.useState([]);
 
       // Fetch all 3 sheets on load + auto-refresh
       React.useEffect(() => {
@@ -1202,8 +1207,9 @@
           try {
             const result = await fetchAllSheets();
             if (result.data.length) setData(result.data);
-            if (Object.keys(result.entitlements).length) setEntitlements(result.entitlements);
-            if (Object.keys(result.requirements).length) setRequirements(result.requirements);
+            setEntitlements(prev => Object.keys(result.entitlements).length ? result.entitlements : prev);
+            setRequirements(prev => Object.keys(result.requirements).length ? result.requirements : prev);
+            setSheetWarnings(result.warnings || []);
             setLastUpdate(new Date());
             setFetchError(null);
           } catch(e) {
@@ -1344,7 +1350,7 @@
         );
       }
 
-      // Error state
+      // Error state - only if NO data at all
       if (fetchError && data.length === 0) {
         return (
           <div className="app-container" style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'80vh'}}>
@@ -1392,6 +1398,13 @@
             <div className="kpi-card red"><div className="kpi-label">Critical/High</div><div className="kpi-value">{kpis.critical}</div></div>
             <div className="kpi-card yellow"><div className="kpi-label">Pending</div><div className="kpi-value">{kpis.pending}</div></div>
           </div>
+
+          {/* Sheet warnings */}
+          {sheetWarnings.length > 0 && (
+            <div style={{background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.4)',borderRadius:'8px',padding:'0.75rem 1rem',marginBottom:'1.5rem',fontSize:'0.8rem',color:'#fbbf24'}}>
+              <strong>⚠️ Missing sheets:</strong> {sheetWarnings.join(' · ')}
+            </div>
+          )}
 
           {/* License Compliance Section */}
           <div className="license-section">
