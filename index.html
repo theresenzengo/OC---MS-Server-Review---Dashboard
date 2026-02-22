@@ -919,7 +919,11 @@
           ws_standard: parseInt(row.ws_standard) || 0,
           sql_enterprise: parseInt(row.sql_enterprise) || 0,
           sql_standard: parseInt(row.sql_standard) || 0,
-          rds_cals: parseInt(row.rds_cals) || 0,
+          sql_std_server_licenses: parseInt(row.sql_std_server_licenses) || 0,
+          sql_std_server_cals: parseInt(row.sql_std_server_cals) || 0,
+          rds_user_cals: parseInt(row.rds_user_cals) || 0,
+          rds_device_cals: parseInt(row.rds_device_cals) || 0,
+          rds_cals: (parseInt(row.rds_user_cals) || 0) + (parseInt(row.rds_device_cals) || 0),
           hasData: true,
           source: row.source || 'G3 License',
           notes: row.notes || ''
@@ -938,7 +942,11 @@
           ws_standard: parseInt(row.ws_standard) || 0,
           sql_enterprise: parseInt(row.sql_enterprise) || 0,
           sql_standard: parseInt(row.sql_standard) || 0,
-          rds_cals: parseInt(row.rds_cals) || 0,
+          sql_std_server_licenses: parseInt(row.sql_std_server_licenses) || 0,
+          sql_std_server_cals: parseInt(row.sql_std_server_cals) || 0,
+          rds_user_cals: parseInt(row.rds_user_cals) || 0,
+          rds_device_cals: parseInt(row.rds_device_cals) || 0,
+          rds_cals: (parseInt(row.rds_user_cals) || 0) + (parseInt(row.rds_device_cals) || 0),
           ws_deployed: parseInt(row.ws_deployed) || 0,
           sql_deployed: parseInt(row.sql_deployed) || 0,
           rds_deployed: parseInt(row.rds_deployed) || 0,
@@ -1078,8 +1086,10 @@
         { name: 'Windows Server Datacenter', req: required.ws_datacenter || 0, ent: entitled.ws_datacenter || 0, unit: 'cores', icon: '🖥️' },
         { name: 'Windows Server Standard', req: required.ws_standard || 0, ent: entitled.ws_standard || 0, unit: 'cores', icon: '🖥️' },
         { name: 'SQL Server Enterprise', req: required.sql_enterprise || 0, ent: entitled.sql_enterprise || 0, unit: 'cores', icon: '🗄️' },
-        { name: 'SQL Server Standard', req: required.sql_standard || 0, ent: entitled.sql_standard || 0, unit: 'cores', icon: '🗄️' },
-        { name: 'RDS User CALs', req: required.rds_cals || 0, ent: entitled.rds_cals || 0, unit: 'CALs', icon: '👥' }
+        { name: 'SQL Server Standard (Per Core)', req: required.sql_standard || 0, ent: entitled.sql_standard || 0, unit: 'cores', icon: '🗄️' },
+        { name: 'SQL Server Standard (Server+CAL)', req: required.sql_std_server_licenses || 0, ent: entitled.sql_std_server_licenses || 0, unit: 'licenses', icon: '🗄️' },
+        { name: 'RDS User CALs', req: required.rds_user_cals || 0, ent: entitled.rds_user_cals || 0, unit: 'CALs', icon: '👥' },
+        { name: 'RDS Device CALs', req: required.rds_device_cals || 0, ent: entitled.rds_device_cals || 0, unit: 'CALs', icon: '🖥️' }
       ];
       const cardHeight = 22; const barWidth = 90; const cardWidth = pageWidth - 2 * margin;
       
@@ -1258,6 +1268,10 @@
             ws_datacenter: allEnts.reduce((s, e) => s + (e.ws_datacenter || 0), 0),
             sql_standard: allEnts.reduce((s, e) => s + (e.sql_standard || 0), 0),
             sql_enterprise: allEnts.reduce((s, e) => s + (e.sql_enterprise || 0), 0),
+            sql_std_server_licenses: allEnts.reduce((s, e) => s + (e.sql_std_server_licenses || 0), 0),
+            sql_std_server_cals: allEnts.reduce((s, e) => s + (e.sql_std_server_cals || 0), 0),
+            rds_user_cals: allEnts.reduce((s, e) => s + (e.rds_user_cals || 0), 0),
+            rds_device_cals: allEnts.reduce((s, e) => s + (e.rds_device_cals || 0), 0),
             rds_cals: allEnts.reduce((s, e) => s + (e.rds_cals || 0), 0),
           };
           const required = {
@@ -1265,6 +1279,10 @@
             ws_datacenter: allReqs.reduce((s, r) => s + (r.ws_datacenter || 0), 0),
             sql_standard: allReqs.reduce((s, r) => s + (r.sql_standard || 0), 0),
             sql_enterprise: allReqs.reduce((s, r) => s + (r.sql_enterprise || 0), 0),
+            sql_std_server_licenses: allReqs.reduce((s, r) => s + (r.sql_std_server_licenses || 0), 0),
+            sql_std_server_cals: allReqs.reduce((s, r) => s + (r.sql_std_server_cals || 0), 0),
+            rds_user_cals: allReqs.reduce((s, r) => s + (r.rds_user_cals || 0), 0),
+            rds_device_cals: allReqs.reduce((s, r) => s + (r.rds_device_cals || 0), 0),
             rds_cals: allReqs.reduce((s, r) => s + (r.rds_cals || 0), 0),
             ws_deployed: allReqs.reduce((s, r) => s + (r.ws_deployed || 0), 0),
             sql_deployed: allReqs.reduce((s, r) => s + (r.sql_deployed || 0), 0),
@@ -1428,8 +1446,14 @@
                   <ComplianceBar label="Windows Server Datacenter" metric="Cores" required={required.ws_datacenter || 0} entitled={entitled.ws_datacenter || 0} icon="🖥️" sku="WS Datacenter 2-Core LIC+SA" />
                   <ComplianceBar label="Windows Server Standard" metric="Cores" required={required.ws_standard || 0} entitled={entitled.ws_standard || 0} icon="🖥️" sku="WS Standard 2-Core LIC+SA" />
                   <ComplianceBar label="SQL Server Enterprise" metric="Cores" required={required.sql_enterprise || 0} entitled={entitled.sql_enterprise || 0} icon="🗄️" sku="SQL Enterprise 2-Core LIC+SA" />
-                  <ComplianceBar label="SQL Server Standard" metric="Cores" required={required.sql_standard || 0} entitled={entitled.sql_standard || 0} icon="🗄️" sku="SQL Standard 2-Core LIC+SA" />
-                  <ComplianceBar label="RDS User CALs" metric="User CALs" required={required.rds_cals || 0} entitled={entitled.rds_cals || 0} icon="👥" sku="RDS User CAL LIC+SA" />
+                  <ComplianceBar label="SQL Server Standard (Per Core)" metric="Cores" required={required.sql_standard || 0} entitled={entitled.sql_standard || 0} icon="🗄️" sku="SQL Standard 2-Core LIC+SA" />
+                  {(required.sql_std_server_licenses > 0 || entitled.sql_std_server_licenses > 0) && (
+                    <ComplianceBar label="SQL Server Standard (Server+CAL)" metric="Server Licenses" required={required.sql_std_server_licenses || 0} entitled={entitled.sql_std_server_licenses || 0} icon="🗄️" sku="SQL Std Server LIC + CALs" />
+                  )}
+                  <ComplianceBar label="RDS User CALs" metric="User CALs" required={required.rds_user_cals || 0} entitled={entitled.rds_user_cals || 0} icon="👥" sku="RDS User CAL LIC+SA" />
+                  {(required.rds_device_cals > 0 || entitled.rds_device_cals > 0) && (
+                    <ComplianceBar label="RDS Device CALs" metric="Device CALs" required={required.rds_device_cals || 0} entitled={entitled.rds_device_cals || 0} icon="🖥️" sku="RDS Device CAL LIC+SA" />
+                  )}
                 </div>
               ) : (
                 <div className="no-data-state">
@@ -1574,7 +1598,7 @@
                 <div className="entitlements-table-wrapper">
                   <table className="entitlements-table">
                     <thead>
-                      <tr><th>Subsidiary</th><th>WS DC</th><th>WS Std</th><th>SQL Ent</th><th>SQL Std</th><th>RDS</th><th>Source</th></tr>
+                      <tr><th>Subsidiary</th><th>WS DC</th><th>WS Std</th><th>SQL Ent</th><th>SQL Std (Core)</th><th>SQL Std (S+CAL)</th><th>RDS User</th><th>RDS Device</th><th>Source</th></tr>
                     </thead>
                     <tbody>
                       {Object.entries(entitlements).map(([name, ent]) => (
@@ -1584,7 +1608,9 @@
                           <td>{(ent.ws_standard || 0).toLocaleString()}</td>
                           <td>{(ent.sql_enterprise || 0).toLocaleString()}</td>
                           <td>{(ent.sql_standard || 0).toLocaleString()}</td>
-                          <td>{(ent.rds_cals || 0).toLocaleString()}</td>
+                          <td>{(ent.sql_std_server_licenses || 0).toLocaleString()}</td>
+                          <td>{(ent.rds_user_cals || 0).toLocaleString()}</td>
+                          <td>{(ent.rds_device_cals || 0).toLocaleString()}</td>
                           <td style={{fontSize:'0.7rem',opacity:0.7}}>{ent.source || ''}</td>
                         </tr>
                       ))}
@@ -1596,7 +1622,9 @@
                         <td>{Object.values(entitlements).reduce((s,e) => s + (e.ws_standard||0), 0).toLocaleString()}</td>
                         <td>{Object.values(entitlements).reduce((s,e) => s + (e.sql_enterprise||0), 0).toLocaleString()}</td>
                         <td>{Object.values(entitlements).reduce((s,e) => s + (e.sql_standard||0), 0).toLocaleString()}</td>
-                        <td>{Object.values(entitlements).reduce((s,e) => s + (e.rds_cals||0), 0).toLocaleString()}</td>
+                        <td>{Object.values(entitlements).reduce((s,e) => s + (e.sql_std_server_licenses||0), 0).toLocaleString()}</td>
+                        <td>{Object.values(entitlements).reduce((s,e) => s + (e.rds_user_cals||0), 0).toLocaleString()}</td>
+                        <td>{Object.values(entitlements).reduce((s,e) => s + (e.rds_device_cals||0), 0).toLocaleString()}</td>
                         <td></td>
                       </tr>
                     </tfoot>
